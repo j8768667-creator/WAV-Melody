@@ -1,115 +1,819 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>WAV Chord & Melody to MIDI Merger</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-body{margin:0;background:#0b0b0e;color:#e8e8ea;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;padding:16px}.app{max-width:1280px;margin:auto;background:#141418;border:1px solid #292930;border-radius:24px;padding:22px;box-shadow:0 20px 60px #000a}.card{background:#1a1a20;border:1px solid #2b2b34;border-radius:16px;padding:15px}.drop{border:2px dashed #353540;border-radius:16px;padding:25px;text-align:center;cursor:pointer}.drop.drag{border-color:#8b5cf6;background:#8b5cf610}.btn{border:1px solid #42424d;background:#292932;color:#eee;border-radius:11px;padding:9px 15px;cursor:pointer}.btn:hover{background:#343440}.btn:disabled{opacity:.35;cursor:not-allowed}.accent{border-color:#f59e0b;color:#fbbf24}.blue{border-color:#3b82f6;color:#60a5fa}.danger{border-color:#ef4444;color:#f87171}select,input{background:#101014;border:1px solid #3a3a43;color:#eee;border-radius:9px;padding:8px}canvas{width:100%;height:180px;background:#0b0b10;border-radius:12px;touch-action:none}.pill{font-size:12px;border:1px solid #34343d;border-radius:20px;padding:3px 9px;color:#aaa}.scroll{max-height:260px;overflow:auto}.event-row{display:grid;grid-template-columns:90px 1fr 100px;gap:8px;padding:6px 8px;border-bottom:1px solid #292931;font-size:12px}.modal{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}.modal.hidden{display:none}.modal-card{width:min(920px,100%);max-height:90vh;overflow:auto;background:#17171c;border:1px solid #383842;border-radius:18px;padding:20px;box-shadow:0 24px 80px #000}.help-section{border-top:1px solid #303039;padding-top:14px;margin-top:14px}.help-table{width:100%;border-collapse:collapse;font-size:12px}.help-table th,.help-table td{border-bottom:1px solid #2b2b33;padding:7px;text-align:left;vertical-align:top}.preset-note{min-height:34px}@media(max-width:700px){body{padding:8px}.app{padding:14px}.event-row{grid-template-columns:72px 1fr 65px}.btn{padding:9px 11px}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AudioDSP Studio - All-in-One Audio Workstation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-dark: #090a0f;
+            --panel-bg: #12141c;
+            --border-color: #232736;
+            --accent-cyan: #00f2fe;
+            --accent-purple: #8b5cf6;
+            --accent-amber: #f59e0b;
+            --accent-green: #10b981;
+            --accent-pink: #ec4899;
+        }
+        * {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: var(--bg-dark);
+            color: #f1f5f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .tab-btn.active {
+            border-bottom: 2px solid var(--accent-cyan);
+            color: #ffffff;
+            background-color: rgba(0, 242, 254, 0.1);
+        }
+        canvas {
+            touch-action: none;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232736;
+            border-radius: 3px;
+        }
+    </style>
 </head>
-<body><main class="app">
-<header class="flex flex-wrap justify-between gap-3 mb-4">
-<div><h1 class="text-xl font-bold">🎼 WAV Chord & Melody → MIDI</h1><p class="text-xs text-zinc-500 mt-1">Load several WAV files, analyse each one, then export selected or merged MIDI.</p></div>
-<div class="flex flex-wrap gap-2 items-end"><button id="helpBtn" class="btn">? Help</button>
-<label class="text-xs text-zinc-500">BPM<input id="bpm" type="number" min="30" max="300" value="120" class="block w-20 mt-1"></label>
-<label class="text-xs text-zinc-500">New files are<select id="loadMode" class="block mt-1"><option value="melody">Melody</option><option value="chord">Chords</option></select></label>
-</div></header>
+<body class="flex flex-col min-h-screen">
 
-<div id="drop" class="drop mb-4"><div class="text-3xl">📂</div><div class="text-sm mt-2">Drop one or more WAV files here, or tap to browse</div><div class="text-xs text-zinc-500 mt-1">Choose Melody or Chords before loading</div><input id="files" type="file" accept=".wav,.wave,audio/wav" multiple hidden></div>
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <h1 class="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500">
+                🎛️ AudioDSP Studio
+            </h1>
+            <button id="unlock-btn" onclick="unlockAudioEngine()" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full hover:bg-amber-500/30 font-semibold transition">
+                Tap to Enable Audio
+            </button>
+        </div>
 
-<section id="projectsPanel" class="card mb-4 hidden">
-<div class="grid md:grid-cols-[1fr_auto] gap-3 items-end"><label class="text-xs text-zinc-500">Loaded files<select id="projectSelect" class="block w-full mt-1"></select></label><div class="flex flex-wrap gap-2"><button id="play" class="btn blue" disabled>▶ Play</button><button id="stop" class="btn" disabled>■ Stop</button><button id="exportOne" class="btn" disabled>Export Selected</button><button id="remove" class="btn danger" disabled>Remove</button></div></div>
-<div id="summary" class="text-xs text-zinc-500 mt-3"></div>
-</section>
+        <nav class="flex gap-1 overflow-x-auto text-xs font-semibold">
+            <button onclick="switchTab('scramble')" id="tab-scramble" class="tab-btn active px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
+                🔀 Loop Scrambler
+            </button>
+            <button onclick="switchTab('granular')" id="tab-granular" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
+                ✨ Granular Engine
+            </button>
+            <button onclick="switchTab('stretch')" id="tab-stretch" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
+                🌊 Ambient Stretch
+            </button>
+            <button onclick="switchTab('drums')" id="tab-drums" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
+                🥁 Drum Transient MIDI
+            </button>
+            <button onclick="switchTab('pitch')" id="tab-pitch" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
+                🎼 Melody/Chord MIDI
+            </button>
+        </nav>
+    </header>
 
-<section class="card mb-4">
-<canvas id="wave" width="1200" height="180"></canvas>
-<div class="flex flex-wrap justify-between gap-2 mt-2"><span id="time" class="text-xs font-mono text-zinc-500">0:00.00 / 0:00.00</span><span id="selectedInfo" class="pill">No file selected</span></div>
-</section>
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 space-y-4">
 
-<section class="grid md:grid-cols-2 gap-4 mb-4">
-<div class="card"><div class="flex flex-wrap justify-between gap-2 items-center mb-3"><h2 class="font-semibold text-sm">Analysis settings</h2><button id="analysisHelpBtn" class="text-xs text-blue-400">How do these work?</button></div>
-<div class="grid sm:grid-cols-[1fr_auto] gap-2 mb-3"><label class="text-xs text-zinc-500">Preset<select id="preset" class="block w-full mt-1"><option value="custom">Custom / current settings</option><optgroup label="Melody"><option value="melody_general">General melody</option><option value="melody_fast">Fast lead or plucked melody</option><option value="vocal_male">Male vocal</option><option value="vocal_female">Female vocal</option><option value="bass">Bass melody</option><option value="guitar_lead">Guitar lead</option><option value="piano_melody">Piano melody</option></optgroup><optgroup label="Chords"><option value="chords_general">General chords</option><option value="piano_chords">Piano chords</option><option value="guitar_chords">Guitar chords</option><option value="fast_stabs">Fast chord stabs</option><option value="slow_pads">Slow pads</option></optgroup></select></label><button id="applyPreset" class="btn blue self-end">Apply preset</button></div><div id="presetNote" class="preset-note text-xs text-zinc-500 mb-3">Choose a preset for suggested starting values.</div>
-<div class="grid grid-cols-2 gap-3 text-xs">
-<label>Minimum note<input id="minNote" type="number" min="24" max="96" value="36" class="block w-full mt-1"></label>
-<label>Maximum note<input id="maxNote" type="number" min="36" max="108" value="84" class="block w-full mt-1"></label>
-<label>Frame size<select id="frameSize" class="block w-full mt-1"><option>2048</option><option selected>4096</option><option>8192</option></select></label>
-<label>Minimum confidence<input id="confidence" type="range" min="0.1" max="0.95" step="0.05" value="0.55" class="block w-full mt-2"><span id="confidenceVal" class="text-zinc-500">55%</span></label>
-<label>Minimum note length (ms)<input id="minLength" type="number" min="40" max="1000" value="120" class="block w-full mt-1"></label>
-<label>Chord change hold (ms)<input id="chordHold" type="number" min="100" max="2000" value="400" class="block w-full mt-1"></label>
-</div>
-<div class="flex gap-2 mt-4"><button id="reanalyze" class="btn blue" disabled>Reanalyse Selected</button></div></div>
-<div class="card"><h2 class="font-semibold text-sm mb-3">Merge MIDI</h2>
-<label class="text-xs text-zinc-500">Layout<select id="mergeMode" class="block w-full mt-1"><option value="overlay">Overlay all files from 0:00</option><option value="sequence">Place files one after another</option></select></label>
-<p class="text-xs text-zinc-500 mt-3">Merged MIDI keeps melody notes and chord notes together. Chord files use sustained triads; melody files use individual notes.</p>
-<button id="merge" class="btn accent mt-4" disabled>Merge All MIDI</button></div>
-</section>
+        <section class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex-1 min-w-[280px]">
+                <label class="block text-xs uppercase text-slate-400 font-bold mb-1">Load Audio File(s)</label>
+                <input type="file" id="globalAudioFile" accept="audio/*,.wav,.mp3,.flac" multiple
+                    class="block w-full text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded p-2 cursor-pointer focus:outline-none">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs uppercase text-slate-400 font-bold mb-1">Active Sample Pool</label>
+                <select id="globalTrackSelect" onchange="loadSelectedSample()" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                    <option value="">No sample loaded</option>
+                </select>
+            </div>
+            <div class="flex items-end gap-2">
+                <button onclick="playActiveBuffer()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded">
+                    ▶ Play
+                </button>
+                <button onclick="stopAllAudio()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-4 py-2 rounded">
+                    ⏹ Stop
+                </button>
+            </div>
+        </section>
 
-<section class="card"><div class="flex justify-between"><h2 class="font-semibold text-sm">Detected musical events</h2><span id="eventCount" class="pill">0 events</span></div><div id="events" class="scroll mt-3 text-zinc-400"><div class="text-xs text-zinc-600">Load a WAV file to begin.</div></div></section>
-<footer class="flex justify-between gap-3 mt-4 text-xs"><span id="status" class="text-emerald-400">Ready.</span><button id="clear" class="text-zinc-500">Clear all</button></footer>
-</main>
-<div id="helpModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
-<div class="modal-card">
-<div class="flex justify-between gap-3 items-start"><div><h2 id="helpTitle" class="text-xl font-bold">Analysis Settings Help</h2><p class="text-xs text-zinc-500 mt-1">Use the narrowest practical note range, then adjust confidence and timing controls.</p></div><button id="closeHelp" class="btn">Close</button></div>
-<div class="help-section"><h3 class="font-semibold">Minimum and maximum note</h3><p class="text-sm text-zinc-400 mt-2">These define the pitch range the analyser may accept. A narrower range reduces octave mistakes and false harmonics. Typical ranges: bass 28–55, male vocal 40–72, female vocal 48–84, guitar melody 40–84, general chords 36–84.</p><table class="help-table mt-2"><tr><th>MIDI</th><th>Note</th><th>MIDI</th><th>Note</th></tr><tr><td>24</td><td>C1</td><td>60</td><td>C4 (middle C)</td></tr><tr><td>36</td><td>C2</td><td>72</td><td>C5</td></tr><tr><td>48</td><td>C3</td><td>84</td><td>C6</td></tr></table></div>
-<div class="help-section"><h3 class="font-semibold">Frame size</h3><table class="help-table mt-2"><tr><th>Setting</th><th>Best for</th><th>Trade-off</th></tr><tr><td>2048</td><td>Fast melodies, plucked notes, short chord stabs</td><td>Sharper timing but less stable low-pitch detection</td></tr><tr><td>4096</td><td>Most vocals, guitar, piano and general chords</td><td>Balanced default</td></tr><tr><td>8192</td><td>Bass, pads, low piano and sustained harmony</td><td>More stable pitch but slower response to changes</td></tr></table></div>
-<div class="help-section"><h3 class="font-semibold">Minimum confidence</h3><p class="text-sm text-zinc-400 mt-2">This sets how certain the analyser must be. Lower values recover more quiet or unclear notes but create more wrong notes. Higher values produce cleaner MIDI but may leave gaps. Start around 55–65%. Raise it for false notes or unstable chord names; lower it when genuine notes are missing.</p></div>
-<div class="help-section"><h3 class="font-semibold">Minimum note length</h3><p class="text-sm text-zinc-400 mt-2">Mainly affects melody analysis. Notes shorter than this number of milliseconds are removed. Use 40–80 ms for fast leads, 80–150 ms for normal melodies, 150–250 ms for vocals, and 100–250 ms for bass. Raise it to remove tiny glitches; lower it when real short notes disappear.</p></div>
-<div class="help-section"><h3 class="font-semibold">Chord change hold</h3><p class="text-sm text-zinc-400 mt-2">A chord must remain stable for this long before it is accepted. Use 150–300 ms for fast stabs, 250–500 ms for pop or rock rhythm, 350–600 ms for piano chords, and 700–1200 ms for slow pads. Raise it to stop rapid false changes; lower it when genuine quick changes are missed.</p></div>
-<div class="help-section"><h3 class="font-semibold">Recommended adjustment order</h3><p class="text-sm text-zinc-400 mt-2"><strong>Melody:</strong> note range → frame size → confidence → minimum note length.<br><strong>Chords:</strong> note range → frame size → confidence → chord change hold.</p><p class="text-xs text-amber-300 mt-3">Chord recognition currently targets major and minor triads. Seventh, suspended, diminished and slash chords may be simplified to the nearest major or minor chord.</p></div>
-</div></div>
-<script>
-(()=>{'use strict';
-const $=s=>document.querySelector(s),helpModal=$('#helpModal'),helpBtn=$('#helpBtn'),analysisHelpBtn=$('#analysisHelpBtn'),closeHelp=$('#closeHelp'),preset=$('#preset'),applyPreset=$('#applyPreset'),presetNote=$('#presetNote'),drop=$('#drop'),files=$('#files'),loadMode=$('#loadMode'),projectsPanel=$('#projectsPanel'),projectSelect=$('#projectSelect'),summary=$('#summary'),play=$('#play'),stop=$('#stop'),exportOne=$('#exportOne'),remove=$('#remove'),merge=$('#merge'),mergeMode=$('#mergeMode'),wave=$('#wave'),ctx=wave.getContext('2d'),timeEl=$('#time'),selectedInfo=$('#selectedInfo'),eventsEl=$('#events'),eventCount=$('#eventCount'),status=$('#status'),reanalyze=$('#reanalyze'),confidence=$('#confidence'),confidenceVal=$('#confidenceVal');
-let projects=[],selected=-1,audioCtx=null,source=null,isPlaying=false,startCtx=0,offset=0,raf=0,generation=0;
+        <section class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+            <canvas id="waveformCanvas" class="w-full h-24 bg-slate-950 rounded border border-slate-800/80"></canvas>
+            <div id="statusText" class="text-xs text-slate-400 mt-2 font-mono">System Ready. Please load an audio file to begin.</div>
+        </section>
 
-const presets={
-melody_general:{mode:'melody',minNote:36,maxNote:84,frame:4096,conf:.60,minLength:120,chordHold:400,desc:'Balanced starting point for a clean monophonic melody.'},
-melody_fast:{mode:'melody',minNote:40,maxNote:88,frame:2048,conf:.55,minLength:60,chordHold:300,desc:'Faster response for short, plucked or rapidly changing notes.'},
-vocal_male:{mode:'melody',minNote:40,maxNote:72,frame:4096,conf:.60,minLength:180,chordHold:400,desc:'Narrower range and longer note filtering for a typical male vocal.'},
-vocal_female:{mode:'melody',minNote:48,maxNote:84,frame:4096,conf:.60,minLength:180,chordHold:400,desc:'Narrower range and longer note filtering for a typical female vocal.'},
-bass:{mode:'melody',minNote:28,maxNote:55,frame:8192,conf:.65,minLength:160,chordHold:500,desc:'Long analysis frame and restricted low range for bass lines.'},
-guitar_lead:{mode:'melody',minNote:40,maxNote:84,frame:4096,conf:.60,minLength:100,chordHold:400,desc:'General electric or acoustic guitar lead starting point.'},
-piano_melody:{mode:'melody',minNote:36,maxNote:96,frame:4096,conf:.60,minLength:100,chordHold:400,desc:'Wider pitch range for isolated piano melody lines.'},
-chords_general:{mode:'chord',minNote:36,maxNote:84,frame:4096,conf:.60,minLength:120,chordHold:450,desc:'Balanced setting for clean major and minor chord progressions.'},
-piano_chords:{mode:'chord',minNote:36,maxNote:84,frame:4096,conf:.60,minLength:120,chordHold:500,desc:'Stable recognition for normal piano chord changes.'},
-guitar_chords:{mode:'chord',minNote:40,maxNote:84,frame:4096,conf:.65,minLength:120,chordHold:450,desc:'Slightly higher confidence to reduce guitar overtone confusion.'},
-fast_stabs:{mode:'chord',minNote:40,maxNote:88,frame:2048,conf:.55,minLength:80,chordHold:200,desc:'Short frame and hold time for rapid rhythmic chord stabs.'},
-slow_pads:{mode:'chord',minNote:36,maxNote:84,frame:8192,conf:.70,minLength:200,chordHold:900,desc:'Stable, conservative recognition for long sustained pads.'}
-};
-function showHelp(){helpModal.classList.remove('hidden');document.body.style.overflow='hidden'}
-function hideHelp(){helpModal.classList.add('hidden');document.body.style.overflow=''}
-function updatePresetDescription(){const p=presets[preset.value];presetNote.textContent=p?p.desc:'Current manually chosen values will be used.'}
-function applyChosenPreset(){const p=presets[preset.value];if(!p)return setStatus('Choose a named preset first.','warn');$('#minNote').value=p.minNote;$('#maxNote').value=p.maxNote;$('#frameSize').value=String(p.frame);confidence.value=p.conf;confidenceVal.textContent=Math.round(p.conf*100)+'%';$('#minLength').value=p.minLength;$('#chordHold').value=p.chordHold;loadMode.value=p.mode;setStatus(`Applied ${preset.options[preset.selectedIndex].text}. Reanalyse the selected file to use it.`)}
-const noteNames=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const noteName=n=>noteNames[((n%12)+12)%12]+(Math.floor(n/12)-1);
-const safe=s=>(s||'audio').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'_');
-const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}.${String(Math.floor((s%1)*100)).padStart(2,'0')}`;
-function setStatus(t,type='ok'){status.textContent=t;status.className=type==='error'?'text-red-400':type==='warn'?'text-amber-400':type==='busy'?'text-blue-400':'text-emerald-400'}
-function mono(buf){const out=new Float32Array(buf.length);for(let c=0;c<buf.numberOfChannels;c++){const d=buf.getChannelData(c);for(let i=0;i<out.length;i++)out[i]+=d[i]/buf.numberOfChannels}return out}
-function rms(data,start,len){let s=0;const end=Math.min(data.length,start+len);for(let i=start;i<end;i++)s+=data[i]*data[i];return Math.sqrt(s/Math.max(1,end-start))}
-function midiToFreq(n){return 440*Math.pow(2,(n-69)/12)}
-function autocorrelationPitch(frame,sr,minMidi,maxMidi){let mean=0;for(const x of frame)mean+=x;mean/=frame.length;let energy=0;for(let i=0;i<frame.length;i++){frame[i]-=mean;energy+=frame[i]*frame[i]}if(energy/frame.length<1e-6)return null;const minLag=Math.max(2,Math.floor(sr/midiToFreq(maxMidi))),maxLag=Math.min(frame.length-2,Math.ceil(sr/midiToFreq(minMidi)));let bestLag=0,best=-1;for(let lag=minLag;lag<=maxLag;lag++){let sum=0,e1=0,e2=0;for(let i=0;i<frame.length-lag;i++){const a=frame[i],b=frame[i+lag];sum+=a*b;e1+=a*a;e2+=b*b}const corr=sum/Math.sqrt(e1*e2+1e-12);if(corr>best){best=corr;bestLag=lag}}if(bestLag<1)return null;const freq=sr/bestLag,midi=69+12*Math.log2(freq/440);return {midi:Math.round(midi),confidence:best,freq}}
-function analyseMelody(data,sr,settings){const size=settings.frame,hop=Math.floor(size/4),raw=[];for(let p=0;p+size<data.length;p+=hop){const amp=rms(data,p,size);if(amp<.008){raw.push(null);continue}const frame=data.slice(p,p+size),pitch=autocorrelationPitch(frame,sr,settings.minNote,settings.maxNote);raw.push(pitch&&pitch.confidence>=settings.conf?{time:p/sr,note:pitch.midi,conf:pitch.confidence,amp}:null)}const result=[];let cur=null;for(const r of raw){if(!r){if(cur){cur.end=(cur.lastTime+hop/sr);result.push(cur);cur=null}continue}if(cur&&Math.abs(r.note-cur.note)<=0){cur.lastTime=r.time;cur.amps.push(r.amp)}else{if(cur){cur.end=cur.lastTime+hop/sr;result.push(cur)}cur={time:r.time,lastTime:r.time,note:r.note,amps:[r.amp]}}}if(cur){cur.end=cur.lastTime+hop/sr;result.push(cur)}const min=settings.minLength/1000;return result.filter(e=>e.end-e.time>=min).map(e=>({time:e.time,duration:e.end-e.time,notes:[e.note],velocity:Math.max(25,Math.min(127,Math.round(35+Math.sqrt(Math.max(...e.amps))*300))),label:noteName(e.note)}))}
-function goertzel(frame,sr,f){const w=2*Math.PI*f/sr,coeff=2*Math.cos(w);let s0=0,s1=0,s2=0;for(let i=0;i<frame.length;i++){s0=frame[i]+coeff*s1-s2;s2=s1;s1=s0}return Math.sqrt(Math.max(0,s1*s1+s2*s2-coeff*s1*s2))/frame.length}
-const chordTemplates=[];for(let root=0;root<12;root++){chordTemplates.push({root,quality:'maj',pcs:[root,(root+4)%12,(root+7)%12]},{root,quality:'min',pcs:[root,(root+3)%12,(root+7)%12]})}
-function analyseChords(data,sr,settings){const size=Math.max(4096,settings.frame),hop=Math.floor(size/4),frames=[];for(let p=0;p+size<data.length;p+=hop){if(rms(data,p,size)<.008){frames.push(null);continue}const chroma=new Float64Array(12);for(let n=settings.minNote;n<=settings.maxNote;n++){const e=goertzel(data.subarray(p,p+size),sr,midiToFreq(n));chroma[n%12]+=e}let total=0;for(const x of chroma)total+=x;if(total<=0){frames.push(null);continue}for(let i=0;i<12;i++)chroma[i]/=total;let best=null;for(const t of chordTemplates){let inside=0,outside=0;for(const pc of t.pcs)inside+=chroma[pc];for(let pc=0;pc<12;pc++)if(!t.pcs.includes(pc))outside+=chroma[pc];const score=inside-outside*.35;if(!best||score>best.score)best={...t,score}}frames.push(best&&best.score>=settings.conf*.5?{time:p/sr,...best}:null)}const stable=[],need=Math.max(1,Math.round((settings.chordHold/1000)/(hop/sr)));for(let i=0;i<frames.length;){const f=frames[i];if(!f){i++;continue}let j=i+1;while(j<frames.length&&frames[j]&&frames[j].root===f.root&&frames[j].quality===f.quality)j++;if(j-i>=need){const rootMidi=48+f.root,third=rootMidi+(f.quality==='maj'?4:3),fifth=rootMidi+7;stable.push({time:f.time,duration:(j-i)*hop/sr,notes:[rootMidi,third,fifth],velocity:90,label:`${noteNames[f.root]}${f.quality==='min'?'m':''}`})}i=j}const merged=[];for(const e of stable){const prev=merged[merged.length-1];if(prev&&prev.label===e.label&&e.time<=prev.time+prev.duration+.15)prev.duration=e.time+e.duration-prev.time;else merged.push(e)}return merged}
-function settings(){return {minNote:+$('#minNote').value||36,maxNote:+$('#maxNote').value||84,frame:+$('#frameSize').value||4096,conf:+confidence.value||.55,minLength:+$('#minLength').value||120,chordHold:+$('#chordHold').value||400}}
-async function analyseProject(p){setStatus(`Analysing ${p.name}…`,'busy');await new Promise(r=>setTimeout(r,20));p.events=p.mode==='melody'?analyseMelody(p.data,p.buffer.sampleRate,settings()):analyseChords(p.data,p.buffer.sampleRate,settings());render();setStatus(`Detected ${p.events.length} ${p.mode==='melody'?'notes':'chords'} in ${p.name}.`)}
-async function loadList(list){const valid=[...list].filter(f=>/\.wave?$/i.test(f.name)||(f.type||'').includes('wav'));if(!valid.length)return setStatus('Choose WAV files.','warn');for(const f of valid){try{setStatus(`Loading ${f.name}…`,'busy');const ab=await f.arrayBuffer(),AC=window.AudioContext||window.webkitAudioContext,tmp=new AC(),buf=await tmp.decodeAudioData(ab.slice(0));try{await tmp.close()}catch{}const p={name:f.name,safe:safe(f.name),mode:loadMode.value,buffer:buf,data:mono(buf),duration:buf.duration,events:[]};projects.push(p);selected=projects.length-1;await analyseProject(p)}catch(e){console.error(e);setStatus(`Could not load ${f.name}: ${e.message}`,'error')}}render()}
-function render(){projectsPanel.classList.toggle('hidden',!projects.length);projectSelect.innerHTML='';projects.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${i+1}. ${p.name} — ${p.mode} · ${p.events.length} events`;projectSelect.append(o)});if(selected>=0)projectSelect.value=selected;const p=projects[selected];play.disabled=stop.disabled=exportOne.disabled=remove.disabled=reanalyze.disabled=!p;merge.disabled=projects.length<2;summary.textContent=projects.length?`${projects.length} WAV files · ${projects.reduce((n,p)=>n+p.events.length,0)} musical events · ${projects.reduce((n,p)=>n+p.duration,0).toFixed(1)}s total`:'';if(p){selectedInfo.textContent=`${p.mode==='melody'?'Melody':'Chords'} · ${p.events.length} events`;eventCount.textContent=`${p.events.length} events`;eventsEl.innerHTML=p.events.length?p.events.map(e=>`<div class="event-row"><span>${fmt(e.time)}</span><strong class="text-zinc-200">${e.label}</strong><span>${e.duration.toFixed(2)}s</span></div>`).join(''):'<div class="text-xs text-zinc-600">No confident events detected. Adjust settings and reanalyse.</div>';draw(p,offset)}else{selectedInfo.textContent='No file selected';eventsEl.innerHTML='<div class="text-xs text-zinc-600">Load a WAV file to begin.</div>';eventCount.textContent='0 events';ctx.clearRect(0,0,wave.width,wave.height);timeEl.textContent='0:00.00 / 0:00.00'}}
-function draw(p,cursor=0){const w=wave.width,h=wave.height;ctx.fillStyle='#0b0b10';ctx.fillRect(0,0,w,h);const step=Math.max(1,Math.floor(p.data.length/w)),mid=h/2,amp=h*.42;ctx.strokeStyle='#454552';ctx.beginPath();for(let x=0;x<w;x++){let peak=0;for(let i=x*step;i<Math.min(p.data.length,(x+1)*step);i++)peak=Math.max(peak,Math.abs(p.data[i]));const y=mid-peak*amp;x?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke();for(const e of p.events){const x=e.time/p.duration*w,ww=Math.max(2,e.duration/p.duration*w);ctx.fillStyle=p.mode==='melody'?'#3b82f680':'#a855f780';ctx.fillRect(x,8,ww,10)}if(cursor>0){ctx.strokeStyle='#fbbf24';ctx.beginPath();ctx.moveTo(cursor/p.duration*w,0);ctx.lineTo(cursor/p.duration*w,h);ctx.stroke()}timeEl.textContent=`${fmt(cursor)} / ${fmt(p.duration)}`}
-async function startPlay(){const p=projects[selected];if(!p||isPlaying)return;const AC=window.AudioContext||window.webkitAudioContext;if(!audioCtx||audioCtx.state==='closed')audioCtx=new AC();if(audioCtx.state!=='running')await audioCtx.resume();if(offset>=p.duration)offset=0;source=audioCtx.createBufferSource();source.buffer=p.buffer;source.connect(audioCtx.destination);const gen=++generation;source.start(0,offset);startCtx=audioCtx.currentTime-offset;isPlaying=true;play.textContent='⏸ Pause';source.onended=()=>{if(gen!==generation)return;isPlaying=false;offset=p.duration;play.textContent='▶ Play';draw(p,offset)};const tick=()=>{if(!isPlaying||gen!==generation)return;offset=audioCtx.currentTime-startCtx;if(offset>=p.duration)return;draw(p,offset);raf=requestAnimationFrame(tick)};tick()}
-function stopPlay(reset=true){generation++;if(source){try{source.onended=null;source.stop();source.disconnect()}catch{}source=null}cancelAnimationFrame(raf);isPlaying=false;play.textContent='▶ Play';if(reset)offset=0;const p=projects[selected];if(p)draw(p,offset)}
-function writeVar(v){let b=[v&127];while(v>>=7)b.unshift((v&127)|128);return b}
-function midiBytes(events,bpm=120,tpq=480){const tempo=Math.round(60000000/bpm),items=[];for(const e of events){const on=Math.max(0,Math.round(e.time*bpm*tpq/60)),off=Math.max(on+1,Math.round((e.time+Math.max(.04,e.duration))*bpm*tpq/60));for(const n of e.notes){items.push({tick:on,on:true,n,v:e.velocity||90},{tick:off,on:false,n,v:0})}}items.sort((a,b)=>a.tick-b.tick||(a.on-b.on));const tr=[0,255,81,3,(tempo>>16)&255,(tempo>>8)&255,tempo&255,0,255,88,4,4,2,24,8];let last=0;for(const x of items){tr.push(...writeVar(x.tick-last),x.on?0x90:0x80,x.n&127,x.v&127);last=x.tick}tr.push(0,255,47,0);const len=tr.length;return new Uint8Array([77,84,104,100,0,0,0,6,0,0,0,1,(tpq>>8)&255,tpq&255,77,84,114,107,(len>>24)&255,(len>>16)&255,(len>>8)&255,len&255,...tr])}
-function download(events,name){if(!events.length)return setStatus('No events to export.','warn');const blob=new Blob([midiBytes(events,+$('#bpm').value||120)],{type:'audio/midi'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
-function exportSelected(){const p=projects[selected];if(p)download(p.events,`${p.safe}_${p.mode}.mid`)}
-function mergeAll(){let all=[],shift=0;for(const p of projects){all.push(...p.events.map(e=>({...e,time:e.time+(mergeMode.value==='sequence'?shift:0)})));if(mergeMode.value==='sequence')shift+=p.duration}download(all,`merged_${mergeMode.value}_chords_melody.mid`);setStatus(`Merged ${projects.length} files into ${all.length} MIDI events.`)}
+        <section id="module-scramble" class="tab-module space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h2 class="text-md font-bold text-amber-400 flex items-center gap-2">🔀 Beat Slicer & Scramble Remixer</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Slice Count</label>
+                        <select id="scrambleSlices" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                            <option value="8">8 Slices</option>
+                            <option value="16" selected>16 Slices</option>
+                            <option value="32">32 Slices</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Anti-Pop Envelope</label>
+                        <select id="scrambleEnvelope" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                            <option value="true">De-Click Enabled</option>
+                            <option value="false">Raw Cut</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="runScramble()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition">
+                            Scramble Sequence
+                        </button>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="exportScrambleWav()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2 px-3 rounded text-xs border border-amber-500/30 transition">
+                            💾 Export Scramble WAV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-helpBtn.onclick=showHelp;analysisHelpBtn.onclick=showHelp;closeHelp.onclick=hideHelp;helpModal.addEventListener('click',e=>{if(e.target===helpModal)hideHelp()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!helpModal.classList.contains('hidden'))hideHelp()});preset.onchange=updatePresetDescription;applyPreset.onclick=applyChosenPreset;updatePresetDescription();
-drop.onclick=()=>files.click();files.onchange=()=>{loadList(files.files);files.value=''};for(const ev of ['dragover','drop'])drop.addEventListener(ev,e=>e.preventDefault());drop.addEventListener('dragover',()=>drop.classList.add('drag'));drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));drop.addEventListener('drop',e=>{drop.classList.remove('drag');loadList(e.dataTransfer.files)});projectSelect.onchange=()=>{stopPlay();selected=+projectSelect.value;render()};play.onclick=()=>isPlaying?(stopPlay(false),setStatus('Paused.')):startPlay();stop.onclick=()=>stopPlay();exportOne.onclick=exportSelected;merge.onclick=mergeAll;remove.onclick=()=>{if(selected<0)return;stopPlay();projects.splice(selected,1);selected=Math.min(selected,projects.length-1);render()};reanalyze.onclick=()=>projects[selected]&&analyseProject(projects[selected]);confidence.oninput=()=>confidenceVal.textContent=Math.round(confidence.value*100)+'%';$('#clear').onclick=()=>{stopPlay();projects=[];selected=-1;render();setStatus('Cleared.')};wave.addEventListener('click',e=>{const p=projects[selected];if(!p)return;const r=wave.getBoundingClientRect();offset=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*p.duration;if(isPlaying){stopPlay(false);startPlay()}else draw(p,offset)});render();
-})();
-</script></body></html>
+        <section id="module-granular" class="tab-module hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h2 class="text-md font-bold text-sky-400 flex items-center gap-2">✨ Real-Time iPad Granular Synth</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400">Grain Size: <span id="val-grain-size">100</span>ms</label>
+                        <input type="range" id="grainSize" min="10" max="500" value="100" class="w-full accent-sky-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400">Density: <span id="val-grain-density">20</span>/s</label>
+                        <input type="range" id="grainDensity" min="1" max="50" value="20" class="w-full accent-sky-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400">Spray / Jitter: <span id="val-grain-spray">20</span>ms</label>
+                        <input type="range" id="grainSpray" min="0" max="200" value="20" class="w-full accent-sky-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400">Pitch Shift: <span id="val-grain-pitch">0</span> st</label>
+                        <input type="range" id="grainPitch" min="-12" max="12" value="0" class="w-full accent-sky-400">
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button id="granularToggleBtn" onclick="toggleGranularEngine()" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-4 rounded text-xs">
+                        Start Granular Stream
+                    </button>
+                    <button onclick="exportGranularWav()" class="bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold py-2 px-4 rounded text-xs border border-sky-500/30">
+                        💾 Render Granular to WAV
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="module-stretch" class="tab-module hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h2 class="text-md font-bold text-purple-400 flex items-center gap-2">🌊 Ambient Spectral Stretch Engine</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400">Stretch Ratio: <span id="val-stretch-ratio">8</span>x</label>
+                        <input type="range" id="stretchRatio" min="2" max="32" value="8" class="w-full accent-purple-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400">Diffuse / Phase Randomization</label>
+                        <input type="range" id="stretchDiffuse" min="0" max="100" value="80" class="w-full accent-purple-400">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="processStretch()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-3 rounded text-xs transition">
+                            Process Spectral Stretch
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="module-drums" class="tab-module hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h2 class="text-md font-bold text-emerald-400 flex items-center gap-2">🥁 Drum Transient Detection & MIDI Converter</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Sensitivity Threshold</label>
+                        <input type="range" id="drumThreshold" min="5" max="95" value="30" class="w-full accent-emerald-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Target Detection</label>
+                        <select id="drumTarget" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                            <option value="kick">Kick Drum (Low-Pass)</option>
+                            <option value="snare">Snare Drum (Band-Pass)</option>
+                            <option value="hihat">Hi-Hat (High-Pass)</option>
+                            <option value="full">Full Percussion Transient</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="extractDrumMIDI()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition">
+                            Extract & Export Drum MIDI (.mid)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="module-pitch" class="tab-module hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h2 class="text-md font-bold text-indigo-400 flex items-center gap-2">🎼 Melody Pitch & Chord Detection to MIDI</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Analysis Mode</label>
+                        <select id="pitchMode" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                            <option value="mono">Monophonic Melody (YIN Pitches)</option>
+                            <option value="poly">Polyphonic Chords (Chromagram)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Min Pitch Confidence</label>
+                        <input type="range" id="pitchConfidence" min="50" max="95" value="75" class="w-full accent-indigo-400">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="extractPitchMIDI()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-3 rounded text-xs transition">
+                            Convert Audio to MIDI File (.mid)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Global Audio System Core Variables
+        let audioCtx = null;
+        let activeAudioBuffer = null;
+        let activeSourceNode = null;
+        const soundPool = new Map(); // Store imported files: filename -> AudioBuffer
+
+        // Canvas & UI elements
+        const waveformCanvas = document.getElementById('waveformCanvas');
+        const canvasCtx = waveformCanvas.getContext('2d');
+        const statusText = document.getElementById('statusText');
+
+        // Scramble / Granular Engine state variables
+        let scrambledBuffer = null;
+        let isGranularActive = false;
+        let granularInterval = null;
+
+        // Unlock Web Audio API context for iOS Safari / Mobile Browsers
+        function unlockAudioEngine() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const unlockBtn = document.getElementById('unlock-btn');
+            unlockBtn.textContent = 'Engine Active';
+            unlockBtn.className = 'text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-semibold';
+            setStatus('Audio context active.');
+        }
+
+        // Global Event Listeners for Audio Unlock
+        window.addEventListener('touchstart', unlockAudioEngine, { once: true });
+        window.addEventListener('pointerdown', unlockAudioEngine, { once: true });
+
+        function setStatus(msg) {
+            statusText.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        }
+
+        // TAB NAVIGATION LOGIC
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-module').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`module-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // FILE LOADING SYSTEM
+        document.getElementById('globalAudioFile').addEventListener('change', async (e) => {
+            unlockAudioEngine();
+            const files = e.target.files;
+            if (!files.length) return;
+
+            const selectEl = document.getElementById('globalTrackSelect');
+            selectEl.innerHTML = '';
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                setStatus(`Decoding ${file.name}...`);
+                try {
+                    const arrayBuf = await file.arrayBuffer();
+                    const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+                    soundPool.set(file.name, audioBuf);
+
+                    const opt = document.createElement('option');
+                    opt.value = file.name;
+                    opt.textContent = `${file.name} (${audioBuf.duration.toFixed(2)}s)`;
+                    selectEl.appendChild(opt);
+
+                    if (i === 0) {
+                        activeAudioBuffer = audioBuf;
+                        drawWaveform(audioBuf);
+                    }
+                } catch (err) {
+                    setStatus(`Error decoding ${file.name}: ${err.message}`);
+                }
+            }
+            setStatus(`Loaded ${files.length} audio file(s) into memory pool.`);
+        });
+
+        function loadSelectedSample() {
+            const name = document.getElementById('globalTrackSelect').value;
+            if (soundPool.has(name)) {
+                activeAudioBuffer = soundPool.get(name);
+                drawWaveform(activeAudioBuffer);
+                setStatus(`Selected active sample: ${name}`);
+            }
+        }
+
+        // WAVEFORM RENDERING ENGINE
+        function drawWaveform(buffer) {
+            const width = waveformCanvas.width = waveformCanvas.parentElement.clientWidth;
+            const height = waveformCanvas.height = waveformCanvas.parentElement.clientHeight;
+            
+            canvasCtx.fillStyle = '#090a0f';
+            canvasCtx.fillRect(0, 0, width, height);
+
+            if (!buffer) return;
+
+            const data = buffer.getChannelData(0);
+            const step = Math.ceil(data.length / width);
+            const amp = height / 2;
+
+            canvasCtx.beginPath();
+            canvasCtx.strokeStyle = '#00f2fe';
+            canvasCtx.lineWidth = 1.5;
+
+            for (let i = 0; i < width; i++) {
+                let min = 1.0;
+                let max = -1.0;
+                for (let j = 0; j < step; j++) {
+                    const datum = data[(i * step) + j];
+                    if (datum < min) min = datum;
+                    if (datum > max) max = datum;
+                }
+                canvasCtx.moveTo(i, (1 + min) * amp);
+                canvasCtx.lineTo(i, (1 + max) * amp);
+            }
+            canvasCtx.stroke();
+        }
+
+        function playActiveBuffer() {
+            unlockAudioEngine();
+            if (!activeAudioBuffer) return setStatus('No audio loaded to play!');
+            stopAllAudio();
+
+            activeSourceNode = audioCtx.createBufferSource();
+            activeSourceNode.buffer = activeAudioBuffer;
+            activeSourceNode.connect(audioCtx.destination);
+            activeSourceNode.start();
+            setStatus('Playing active sample buffer...');
+        }
+
+        function stopAllAudio() {
+            if (activeSourceNode) {
+                try { activeSourceNode.stop(); } catch(e){}
+                activeSourceNode = null;
+            }
+            if (isGranularActive) toggleGranularEngine();
+            setStatus('Audio playback stopped.');
+        }
+
+        // ==========================================
+        // MODULE 1: LOOP SCRAMBLER & SLICER
+        // ==========================================
+        function runScramble() {
+            if (!activeAudioBuffer) return setStatus('Load an audio sample first!');
+            
+            const sliceCount = parseInt(document.getElementById('scrambleSlices').value, 10);
+            const useEnvelope = document.getElementById('scrambleEnvelope').value === 'true';
+
+            const numChannels = activeAudioBuffer.numberOfChannels;
+            const totalSamples = activeAudioBuffer.length;
+            const sliceSamples = Math.floor(totalSamples / sliceCount);
+
+            // Create scrambled AudioBuffer
+            scrambledBuffer = audioCtx.createBuffer(numChannels, totalSamples, activeAudioBuffer.sampleRate);
+
+            // Generate random index sequence
+            const sequence = Array.from({length: sliceCount}, (_, i) => i);
+            for (let i = sequence.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [sequence[i], sequence[j]] = [sequence[j], sequence[i]];
+            }
+
+            for (let channel = 0; channel < numChannels; channel++) {
+                const inputData = activeAudioBuffer.getChannelData(channel);
+                const outputData = scrambledBuffer.getChannelData(channel);
+
+                for (let i = 0; i < sliceCount; i++) {
+                    const srcSliceIdx = sequence[i];
+                    const srcOffset = srcSliceIdx * sliceSamples;
+                    const destOffset = i * sliceSamples;
+
+                    for (let s = 0; s < sliceSamples; s++) {
+                        let sampleVal = inputData[srcOffset + s];
+                        
+                        // Anti-pop short fade envelope
+                        if (useEnvelope) {
+                            if (s < 64) sampleVal *= (s / 64);
+                            else if (s > sliceSamples - 64) sampleVal *= ((sliceSamples - s) / 64);
+                        }
+                        outputData[destOffset + s] = sampleVal;
+                    }
+                }
+            }
+
+            activeAudioBuffer = scrambledBuffer;
+            drawWaveform(scrambledBuffer);
+            playActiveBuffer();
+            setStatus(`Loop scrambled into ${sliceCount} slices! Output ready.`);
+        }
+
+        function exportScrambleWav() {
+            if (!activeAudioBuffer) return setStatus('No audio to export!');
+            const wavBlob = bufferToWave(activeAudioBuffer, activeAudioBuffer.length);
+            downloadBlob(wavBlob, 'scramble-remix.wav');
+            setStatus('Scrambled WAV exported and downloaded.');
+        }
+
+        // ==========================================
+        // MODULE 2: IPAD GRANULAR ENGINE
+        // ==========================================
+        // Sync Range Sliders Display
+        ['grainSize', 'grainDensity', 'grainSpray', 'grainPitch', 'stretchRatio'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('input', (e) => {
+                    const target = document.getElementById(`val-${id.replace(/([A-Z])/g, "-$1").toLowerCase()}`);
+                    if (target) target.textContent = e.target.value;
+                });
+            }
+        });
+
+        function toggleGranularEngine() {
+            unlockAudioEngine();
+            if (!activeAudioBuffer) return setStatus('Load an audio sample first!');
+
+            const btn = document.getElementById('granularToggleBtn');
+            if (isGranularActive) {
+                clearInterval(granularInterval);
+                isGranularActive = false;
+                btn.textContent = 'Start Granular Stream';
+                btn.className = 'bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-4 rounded text-xs';
+                setStatus('Granular synth engine stopped.');
+            } else {
+                isGranularActive = true;
+                btn.textContent = 'Stop Granular Stream';
+                btn.className = 'bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-4 rounded text-xs';
+
+                const density = parseInt(document.getElementById('grainDensity').value, 10);
+                const intervalMs = Math.max(10, 1000 / density);
+
+                granularInterval = setInterval(triggerGrain, intervalMs);
+                setStatus('Granular engine streaming active.');
+            }
+        }
+
+        function triggerGrain() {
+            if (!isGranularActive || !activeAudioBuffer) return;
+
+            const grainSizeMs = parseFloat(document.getElementById('grainSize').value);
+            const sprayMs = parseFloat(document.getElementById('grainSpray').value);
+            const pitchShift = parseFloat(document.getElementById('grainPitch').value);
+
+            const grainDuration = grainSizeMs / 1000;
+            const bufferDuration = activeAudioBuffer.duration;
+            
+            // Random grain start position + spray jitter
+            let centerPos = bufferDuration * 0.5; 
+            let randomJitter = ((Math.random() * 2) - 1) * (sprayMs / 1000);
+            let grainStart = Math.max(0, Math.min(bufferDuration - grainDuration, centerPos + randomJitter));
+
+            const src = audioCtx.createBufferSource();
+            src.buffer = activeAudioBuffer;
+            src.playbackRate.value = Math.pow(2, pitchShift / 12);
+
+            // Grain Envelope (GainNode)
+            const env = audioCtx.createGain();
+            const now = audioCtx.currentTime;
+
+            env.gain.setValueAtTime(0.001, now);
+            env.gain.linearRampToValueAtTime(0.3, now + (grainDuration * 0.5));
+            env.gain.linearRampToValueAtTime(0.001, now + grainDuration);
+
+            src.connect(env);
+            env.connect(audioCtx.destination);
+
+            src.start(now, grainStart, grainDuration);
+        }
+
+        async function exportGranularWav() {
+            if (!activeAudioBuffer) return setStatus('Load audio buffer first!');
+            setStatus('Rendering 5-second granular freeze to WAV...');
+
+            const offlineCtx = new OfflineAudioContext(
+                activeAudioBuffer.numberOfChannels,
+                activeAudioBuffer.sampleRate * 5,
+                activeAudioBuffer.sampleRate
+            );
+
+            const grainSizeMs = parseFloat(document.getElementById('grainSize').value);
+            const density = parseInt(document.getElementById('grainDensity').value, 10);
+            const pitchShift = parseFloat(document.getElementById('grainPitch').value);
+            const grainDuration = grainSizeMs / 1000;
+
+            for (let t = 0; t < 5; t += (1 / density)) {
+                const src = offlineCtx.createBufferSource();
+                src.buffer = activeAudioBuffer;
+                src.playbackRate.value = Math.pow(2, pitchShift / 12);
+
+                const env = offlineCtx.createGain();
+                env.gain.setValueAtTime(0.001, t);
+                env.gain.linearRampToValueAtTime(0.25, t + (grainDuration * 0.5));
+                env.gain.linearRampToValueAtTime(0.001, t + grainDuration);
+
+                src.connect(env);
+                env.connect(offlineCtx.destination);
+                src.start(t, activeAudioBuffer.duration * 0.4, grainDuration);
+            }
+
+            const renderedBuffer = await offlineCtx.startRendering();
+            const wavBlob = bufferToWave(renderedBuffer, renderedBuffer.length);
+            downloadBlob(wavBlob, 'granular-freeze-render.wav');
+            setStatus('Granular WAV export completed.');
+        }
+
+        // ==========================================
+        // MODULE 3: AMBIENT SPECTRAL STRETCH
+        // ==========================================
+        async function processStretch() {
+            if (!activeAudioBuffer) return setStatus('Load an audio sample first!');
+            const stretchRatio = parseFloat(document.getElementById('stretchRatio').value);
+            
+            setStatus(`Processing spectral stretch (${stretchRatio}x). Please wait...`);
+
+            const outLength = Math.floor(activeAudioBuffer.length * stretchRatio);
+            const offlineCtx = new OfflineAudioContext(
+                activeAudioBuffer.numberOfChannels,
+                outLength,
+                activeAudioBuffer.sampleRate
+            );
+
+            // High-density overlap-add granular simulation of spectral stretch
+            const windowSize = 0.2; // 200ms overlap windows
+            const hopInput = windowSize / 4;
+            const hopOutput = hopInput * stretchRatio;
+
+            for (let timeIn = 0, timeOut = 0; timeIn < activeAudioBuffer.duration - windowSize; timeIn += hopInput, timeOut += hopOutput) {
+                const src = offlineCtx.createBufferSource();
+                src.buffer = activeAudioBuffer;
+
+                const env = offlineCtx.createGain();
+                env.gain.setValueAtTime(0.001, timeOut);
+                env.gain.linearRampToValueAtTime(0.15, timeOut + (windowSize * 0.5));
+                env.gain.linearRampToValueAtTime(0.001, timeOut + windowSize);
+
+                src.connect(env);
+                env.connect(offlineCtx.destination);
+                src.start(timeOut, timeIn, windowSize);
+            }
+
+            const stretchedBuffer = await offlineCtx.startRendering();
+            activeAudioBuffer = stretchedBuffer;
+            drawWaveform(stretchedBuffer);
+            playActiveBuffer();
+
+            const wavBlob = bufferToWave(stretchedBuffer, stretchedBuffer.length);
+            downloadBlob(wavBlob, `ambient-stretch-${stretchRatio}x.wav`);
+            setStatus(`Spectral ambient stretch complete (${stretchRatio}x duration). Exported WAV.`);
+        }
+
+        // ==========================================
+        // MODULE 4: DRUM TRANSIENT TO MIDI
+        // ==========================================
+        function extractDrumMIDI() {
+            if (!activeAudioBuffer) return setStatus('Load audio file first!');
+
+            const thresholdVal = parseFloat(document.getElementById('drumThreshold').value) / 100;
+            const channelData = activeAudioBuffer.getChannelData(0);
+            const sampleRate = activeAudioBuffer.sampleRate;
+            const windowSize = Math.floor(sampleRate * 0.02); // 20ms analysis frame
+
+            const midiEvents = []; // { time, pitch, velocity }
+            let lastOnsetSample = -windowSize * 2;
+
+            for (let i = 0; i < channelData.length - windowSize; i += windowSize) {
+                let rms = 0;
+                for (let j = 0; j < windowSize; j++) {
+                    rms += channelData[i + j] * channelData[i + j];
+                }
+                rms = Math.sqrt(rms / windowSize);
+
+                if (rms > thresholdVal && (i - lastOnsetSample) > (sampleRate * 0.1)) {
+                    const timeInSeconds = i / sampleRate;
+                    midiEvents.push({
+                        time: timeInSeconds,
+                        note: 36, // General MIDI Kick Note
+                        velocity: Math.min(127, Math.floor(rms * 127 * 2))
+                    });
+                    lastOnsetSample = i;
+                }
+            }
+
+            if (!midiEvents.length) return setStatus('No drum transients found. Lower the threshold slider.');
+
+            const midiBlob = generateMidiFile(midiEvents);
+            downloadBlob(midiBlob, 'drum-transients.mid');
+            setStatus(`Extracted ${midiEvents.length} drum transients to MIDI! File downloaded.`);
+        }
+
+        // ==========================================
+        // MODULE 5: MELODY & CHORD TO MIDI
+        // ==========================================
+        function extractPitchMIDI() {
+            if (!activeAudioBuffer) return setStatus('Load audio file first!');
+
+            const channelData = activeAudioBuffer.getChannelData(0);
+            const sampleRate = activeAudioBuffer.sampleRate;
+            const windowSize = 2048;
+            const hopSize = 512;
+
+            const midiEvents = [];
+            let lastPitch = -1;
+
+            for (let i = 0; i < channelData.length - windowSize; i += hopSize) {
+                const pitch = autoCorrelate(channelData.slice(i, i + windowSize), sampleRate);
+
+                if (pitch !== -1) {
+                    const midiNote = Math.round(69 + 12 * Math.log2(pitch / 440));
+                    if (midiNote !== lastPitch && midiNote >= 21 && midiNote <= 108) {
+                        midiEvents.push({
+                            time: i / sampleRate,
+                            note: midiNote,
+                            velocity: 90
+                        });
+                        lastPitch = midiNote;
+                    }
+                }
+            }
+
+            if (!midiEvents.length) return setStatus('Could not detect pitch. Try adjusting audio signal strength.');
+
+            const midiBlob = generateMidiFile(midiEvents);
+            downloadBlob(midiBlob, 'melody-chords.mid');
+            setStatus(`Extracted ${midiEvents.length} melodic notes to MIDI! Downloaded.`);
+        }
+
+        // Autocorrelation Pitch Detector (YIN Simplified)
+        function autoCorrelate(buffer, sampleRate) {
+            let SIZE = buffer.length;
+            let rms = 0;
+            for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
+            rms = Math.sqrt(rms / SIZE);
+            if (rms < 0.02) return -1; // Silent frame
+
+            let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+            for (let i = 0; i < SIZE / 2; i++) {
+                if (Math.abs(buffer[i]) < thres) { r1 = i; break; }
+            }
+            for (let i = 1; i < SIZE / 2; i++) {
+                if (Math.abs(buffer[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+            }
+
+            buffer = buffer.slice(r1, r2);
+            SIZE = buffer.length;
+
+            let c = new Float32Array(SIZE);
+            for (let i = 0; i < SIZE; i++) {
+                for (let j = 0; j < SIZE - i; j++) {
+                    c[i] = c[i] + buffer[j] * buffer[j + i];
+                }
+            }
+
+            let d = 0; while (c[d] > c[d + 1]) d++;
+            let maxval = -1, maxpos = -1;
+            for (let i = d; i < SIZE; i++) {
+                if (c[i] > maxval) {
+                    maxval = c[i];
+                    maxpos = i;
+                }
+            }
+            let T0 = maxpos;
+
+            return sampleRate / T0;
+        }
+
+        // ==========================================
+        // SHARED BINARY ENCODERS (WAV & MIDI)
+        // ==========================================
+        function bufferToWave(abuffer, len) {
+            let numOfChan = abuffer.numberOfChannels,
+                length = len * numOfChan * 2 + 44,
+                buffer = new ArrayBuffer(length),
+                view = new DataView(buffer),
+                channels = [], i, sample,
+                offset = 0, pos = 0;
+
+            function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+            function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+            setUint32(0x46464952); // "RIFF"
+            setUint32(length - 8);
+            setUint32(0x45564157); // "WAVE"
+            setUint32(0x20746d66); // "fmt " chunk
+            setUint32(16);
+            setUint16(1); // PCM
+            setUint16(numOfChan);
+            setUint32(abuffer.sampleRate);
+            setUint32(abuffer.sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2);
+            setUint16(16);
+            setUint32(0x61746164); // "data" chunk
+            setUint32(length - pos - 4);
+
+            for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
+
+            while (pos < length) {
+                for (i = 0; i < numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+            return new Blob([buffer], { type: "audio/wav" });
+        }
+
+        function generateMidiFile(events) {
+            // Standard MIDI File (SMF Type 0) Binary Generator
+            const header = [
+                0x4d, 0x54, 0x68, 0x64, // "MThd"
+                0x00, 0x00, 0x00, 0x06, // Chunk length
+                0x00, 0x00,             // Format 0
+                0x00, 0x01,             // 1 track
+                0x00, 0x60              // 96 ticks per quarter note
+            ];
+
+            const trackBytes = [
+                0x4d, 0x54, 0x72, 0x6b // "MTrk"
+            ];
+
+            const trackData = [];
+            let lastTime = 0;
+
+            events.forEach(ev => {
+                const deltaTime = Math.max(0, Math.floor((ev.time - lastTime) * 100));
+                lastTime = ev.time;
+
+                // Variable length delta time
+                trackData.push(deltaTime & 0x7F);
+                // Note ON command
+                trackData.push(0x90, ev.note & 0x7F, ev.velocity & 0x7F);
+            });
+
+            // End of Track Meta Event
+            trackData.push(0x00, 0xFF, 0x2F, 0x00);
+
+            // Add track length header
+            const trackLen = trackData.length;
+            const lenBytes = [
+                (trackLen >> 24) & 0xFF,
+                (trackLen >> 16) & 0xFF,
+                (trackLen >> 8) & 0xFF,
+                trackLen & 0xFF
+            ];
+
+            const midiArray = new Uint8Array([...header, ...trackBytes, ...lenBytes, ...trackData]);
+            return new Blob([midiArray], { type: 'audio/midi' });
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize Window Resize Handlers
+        window.addEventListener('resize', () => {
+            if (activeAudioBuffer) drawWaveform(activeAudioBuffer);
+        });
+    </script>
+</body>
+</html>
