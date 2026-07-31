@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AudioDSP Studio - Advanced DAW & Sound Design Suite</title>
+    <title>AudioDSP Studio Ultimate Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -17,7 +17,7 @@
             --accent-pink: #ec4899;
         }
 
-        /* Prevent double-tap zoom and touch delay on iPad/iOS */
+        /* Prevent double-tap screen zoom on iPad / Safari */
         * {
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
@@ -26,7 +26,7 @@
             box-sizing: border-box;
         }
 
-        input[type="range"], input[type="text"], select {
+        input[type="range"], input[type="text"], input[type="number"], select {
             user-select: auto;
         }
 
@@ -46,13 +46,20 @@
         }
 
         canvas {
-            touch-action: none; /* Allows direct 2D touch interaction without page scrolling */
+            touch-action: none; /* Direct 2D canvas gestures without page scroll */
         }
 
-        /* Sleek Webkit Scrollbars */
         ::-webkit-scrollbar { height: 6px; width: 6px; }
         ::-webkit-scrollbar-track { background: #090a0f; }
         ::-webkit-scrollbar-thumb { background: #232736; border-radius: 3px; }
+
+        .slice-cell {
+            transition: all 0.1s ease;
+        }
+        .slice-cell.playing {
+            border-color: #00f2fe !important;
+            background-color: rgba(0, 242, 254, 0.25) !important;
+        }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
@@ -60,7 +67,7 @@
     <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <h1 class="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500">
-                🎛️ AudioDSP Studio Pro
+                🎛️ AudioDSP Studio Ultimate
             </h1>
             <button id="unlock-btn" onclick="unlockAudioEngine()" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full font-semibold transition hover:bg-amber-500/30">
                 Tap to Enable Audio
@@ -90,7 +97,7 @@
 
         <section class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
             <div class="flex-1 min-w-[260px]">
-                <label class="block text-xs uppercase text-slate-400 font-bold mb-1">1. Load Audio File(s)</label>
+                <label class="block text-xs uppercase text-slate-400 font-bold mb-1">1. Load Audio Sample(s)</label>
                 <input type="file" id="globalAudioFile" accept="audio/*,.wav,.mp3,.flac" multiple
                     class="block w-full text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded p-2 cursor-pointer focus:outline-none">
             </div>
@@ -115,7 +122,7 @@
                 <canvas id="waveformCanvas" class="w-full h-28 bg-slate-950 rounded border border-slate-800/80 cursor-crosshair"></canvas>
             </div>
             <div class="flex items-center justify-between text-xs text-slate-400 font-mono">
-                <span id="statusText">System Ready. Please load an audio file to begin.</span>
+                <span id="statusText">System Ready. Load an audio file to begin.</span>
                 <span id="audioStats">0.00s | 44100Hz</span>
             </div>
         </section>
@@ -123,15 +130,17 @@
         <section id="module-scramble" class="tab-module space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-md font-bold text-amber-400 flex items-center gap-2">🔀 Loop Scrambler & Beat Slicer</h2>
+                    <h2 class="text-md font-bold text-amber-400 flex items-center gap-2">🔀 Loop Scrambler & Slice Mapping Remixer</h2>
                     <span id="bpmDisplay" class="text-xs bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-1 rounded font-mono">BPM: --</span>
                 </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <button onclick="detectBPM()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold py-2 px-3 rounded border border-amber-500/20 transition">
-                        ⚡ Detect Loop BPM
+                        ⚡ Detect BPM
                     </button>
                     <div>
-                        <select id="scrambleSlices" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                        <label class="block text-[10px] text-slate-400 mb-1">Slice Count</label>
+                        <select id="scrambleSlices" onchange="resetSliceGrid()" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
                             <option value="4">4 Slices</option>
                             <option value="8">8 Slices</option>
                             <option value="16" selected>16 Slices</option>
@@ -139,17 +148,38 @@
                         </select>
                     </div>
                     <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Envelope Protection</label>
                         <select id="scrambleEnvelope" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                            <option value="true">De-Click Envelope (On)</option>
+                            <option value="true">5ms Anti-Pop Crossfade</option>
                             <option value="false">Raw Hard Cut</option>
                         </select>
                     </div>
-                    <button onclick="runScramble()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition active:scale-95">
-                        🎲 Scramble Slices
-                    </button>
-                    <button onclick="exportScrambleWav()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2 px-3 rounded text-xs border border-amber-500/30 transition active:scale-95">
-                        💾 Export WAV
-                    </button>
+                    <div class="flex items-end">
+                        <button onclick="runScramble()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition active:scale-95">
+                            🎲 Scramble Slices
+                        </button>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="exportScrambleWav()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2 px-3 rounded text-xs border border-amber-500/30 transition active:scale-95">
+                            💾 Export Scramble WAV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 border-t border-slate-800 pt-3">
+                    <div>
+                        <label class="block text-xs text-slate-400">Trim Start: <span id="val-trim-start">0</span>%</label>
+                        <input type="range" id="trimStart" min="0" max="95" value="0" class="w-full accent-amber-400" oninput="drawWaveform(activeAudioBuffer)">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400">Trim End: <span id="val-trim-end">100</span>%</label>
+                        <input type="range" id="trimEnd" min="5" max="100" value="100" class="w-full accent-amber-400" oninput="drawWaveform(activeAudioBuffer)">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-2">Interactive Slice Mapping Sequence</label>
+                    <div id="sliceGrid" class="grid grid-cols-8 md:grid-cols-16 gap-1 p-2 bg-slate-950 rounded border border-slate-800"></div>
                 </div>
             </div>
         </section>
@@ -157,6 +187,7 @@
         <section id="module-granular" class="tab-module hidden space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
                 <h2 class="text-md font-bold text-sky-400 flex items-center gap-2">✨ Interactive iPad Granular Pad</h2>
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
@@ -177,18 +208,35 @@
                                 <input type="range" id="grainPitch" min="-12" max="12" value="0" class="w-full accent-sky-400">
                             </div>
                         </div>
+
+                        <div class="border-t border-slate-800 pt-3">
+                            <label class="block text-xs text-slate-400 mb-1 font-semibold">Render Export Duration Choice</label>
+                            <div class="flex gap-2 items-center">
+                                <select id="granularDurationSelect" onchange="toggleGranularCustomDuration()" class="flex-1 bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                                    <option value="3">3 Seconds</option>
+                                    <option value="5" selected>5 Seconds</option>
+                                    <option value="10">10 Seconds</option>
+                                    <option value="30">30 Seconds</option>
+                                    <option value="60">60 Seconds</option>
+                                    <option value="custom">Custom Seconds...</option>
+                                </select>
+                                <input type="number" id="granularCustomSec" min="1" max="300" value="15" class="hidden w-20 bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                            </div>
+                        </div>
+
                         <div class="flex gap-2">
                             <button id="granularToggleBtn" onclick="toggleGranularEngine()" class="flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition active:scale-95">
                                 Start Granular Stream
                             </button>
                             <button onclick="exportGranularWav()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold py-2 px-3 rounded text-xs border border-sky-500/30 transition active:scale-95">
-                                💾 Render 5s WAV
+                                💾 Render Granular WAV
                             </button>
                         </div>
                     </div>
+
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">2D Touch Controller (Drag finger/stylus)</label>
-                        <canvas id="granularPad" class="w-full h-36 bg-slate-950 rounded border border-slate-800 cursor-pointer"></canvas>
+                        <canvas id="granularPad" class="w-full h-44 bg-slate-950 rounded border border-slate-800 cursor-pointer"></canvas>
                     </div>
                 </div>
             </div>
@@ -196,19 +244,45 @@
 
         <section id="module-stretch" class="tab-module hidden space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h2 class="text-md font-bold text-purple-400 flex items-center gap-2">🌊 Paulstretch Spectral Dissolver</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <h2 class="text-md font-bold text-purple-400 flex items-center gap-2">🌊 Paulstretch Spectral Dissolver Engine</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-xs text-slate-400">Stretch Ratio: <span id="val-stretch-ratio">8</span>x</label>
-                        <input type="range" id="stretchRatio" min="2" max="32" value="8" class="w-full accent-purple-400">
+                        <input type="range" id="stretchRatio" min="2" max="100" value="8" class="w-full accent-purple-400">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400">Phase Diffusion: <span id="val-stretch-diffuse">80</span>%</label>
+                        <label class="block text-xs text-slate-400">Grain Window: <span id="val-stretch-window">200</span>ms</label>
+                        <input type="range" id="stretchWindow" min="50" max="600" value="200" class="w-full accent-purple-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400">Phase Blur: <span id="val-stretch-diffuse">80</span>%</label>
                         <input type="range" id="stretchDiffuse" min="0" max="100" value="80" class="w-full accent-purple-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400">Pitch Transpose: <span id="val-stretch-pitch">0</span> st</label>
+                        <input type="range" id="stretchPitch" min="-12" max="12" value="0" class="w-full accent-purple-400">
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Render Export Duration Choice</label>
+                        <div class="flex gap-2 items-center">
+                            <select id="stretchDurationSelect" onchange="toggleStretchCustomDuration()" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                                <option value="full" selected>Full Stretched Length (Native)</option>
+                                <option value="10">10 Seconds Preview</option>
+                                <option value="30">30 Seconds Preview</option>
+                                <option value="60">60 Seconds Ambient</option>
+                                <option value="120">120 Seconds (2 Mins)</option>
+                                <option value="custom">Custom Seconds...</option>
+                            </select>
+                            <input type="number" id="stretchCustomSec" min="1" max="600" value="45" class="hidden w-24 bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                        </div>
                     </div>
                     <div class="flex items-end">
                         <button onclick="processStretch()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-3 rounded text-xs transition active:scale-95">
-                            Process Spectral Stretch
+                            Process & Export Spectral Stretch WAV
                         </button>
                     </div>
                 </div>
@@ -217,23 +291,25 @@
 
         <section id="module-drums" class="tab-module hidden space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h2 class="text-md font-bold text-emerald-400 flex items-center gap-2">🥁 Drum Transient Detection & MIDI Generator</h2>
+                <h2 class="text-md font-bold text-emerald-400 flex items-center gap-2">🥁 Drum Transient Detection & MIDI Converter</h2>
+                
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Threshold Sensitivity</label>
+                        <label class="block text-xs text-slate-400 mb-1">Sensitivity Threshold</label>
                         <input type="range" id="drumThreshold" min="5" max="95" value="30" class="w-full accent-emerald-400">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Target Instrument</label>
+                        <label class="block text-xs text-slate-400 mb-1">Target Detection Filter</label>
                         <select id="drumTarget" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
                             <option value="kick">Kick Drum (Low-Pass Filter)</option>
                             <option value="snare">Snare Drum (Band-Pass Filter)</option>
                             <option value="hihat">Hi-Hat (High-Pass Filter)</option>
+                            <option value="full">Full Percussion Transient</option>
                         </select>
                     </div>
                     <div class="flex items-end">
                         <button onclick="previewDrumSynth()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-2 px-3 rounded text-xs border border-emerald-500/30 transition">
-                            🔊 Preview Drum Trigger
+                            🔊 Preview Drum Synth Trigger
                         </button>
                     </div>
                     <div class="flex items-end">
@@ -247,13 +323,16 @@
 
         <section id="module-pitch" class="tab-module hidden space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h2 class="text-md font-bold text-indigo-400 flex items-center gap-2">🎼 Audio Pitch Extraction to MIDI</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <h2 class="text-md font-bold text-indigo-400 flex items-center gap-2">🎼 Audio Pitch Detection & Multi-Track MIDI Merger</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Pitch Detection Algorithm</label>
-                        <select id="pitchMode" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                            <option value="mono">Monophonic Vocal/Melody (YIN)</option>
-                            <option value="poly">Polyphonic Chords (Chromagram)</option>
+                        <label class="block text-xs text-slate-400 mb-1">Analysis Preset</label>
+                        <select id="pitchPreset" onchange="applyPitchPreset()" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                            <option value="vocal">Vocal / Lead Melody (YIN Monophonic)</option>
+                            <option value="piano">Piano / Polyphonic Chords</option>
+                            <option value="guitar">Guitar Riff</option>
+                            <option value="bass">Bassline Detection</option>
                         </select>
                     </div>
                     <div>
@@ -262,12 +341,18 @@
                     </div>
                     <div class="flex items-end">
                         <button onclick="extractPitchMIDI()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-3 rounded text-xs transition active:scale-95">
-                            💾 Export Pitch MIDI (.mid)
+                            💾 Export Single MIDI (.mid)
+                        </button>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="mergeAllPoolMIDI()" class="w-full bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold py-2 px-3 rounded text-xs border border-indigo-500/30 transition active:scale-95">
+                            🎹 Merge Pool to Multi-Track MIDI
                         </button>
                     </div>
                 </div>
+
                 <div class="bg-slate-950 border border-slate-800 rounded p-3 h-32 overflow-y-auto font-mono text-xs text-slate-400" id="noteLog">
-                    Note Event Visualizer Log Ready...
+                    Note Event Logger Ready...
                 </div>
             </div>
         </section>
@@ -275,15 +360,15 @@
     </main>
 
     <script>
-        // Prevent iPad double-tap zoom via touch listener delta
+        // Prevent Safari double-tap zoom via touch delta
         let lastTouchEnd = 0;
-        document.addEventListener('touchend', function (event) {
+        document.addEventListener('touchend', function (e) {
             const now = (new Date()).getTime();
             if (now - lastTouchEnd <= 300) {
-                event.preventDefault();
+                e.preventDefault();
             }
             lastTouchEnd = now;
-        }, false);
+        }, { passive: false });
 
         // Core Web Audio State
         let audioCtx = null;
@@ -298,10 +383,11 @@
         const padCtx = granularPad.getContext('2d');
         const statusText = document.getElementById('statusText');
 
-        // Engine State Variables
+        // Engine Parameters
         let isGranularActive = false;
         let granularInterval = null;
-        let scrubPosition = 0.5; // Default center position for granular pad
+        let scrubPosition = 0.5;
+        let sliceSequence = [];
 
         function setStatus(msg) {
             statusText.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
@@ -317,7 +403,7 @@
             const btn = document.getElementById('unlock-btn');
             btn.textContent = 'Engine Active';
             btn.className = 'text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-semibold';
-            setStatus('Web Audio Context unlocked and running.');
+            setStatus('Web Audio Context unlocked.');
         }
 
         window.addEventListener('touchstart', unlockAudioEngine, { once: true });
@@ -333,7 +419,7 @@
             if (tabId === 'granular') drawGranularPad();
         }
 
-        // File Loading & Management
+        // File Management
         document.getElementById('globalAudioFile').addEventListener('change', async (e) => {
             unlockAudioEngine();
             const files = e.target.files;
@@ -344,7 +430,7 @@
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                setStatus(`Loading ${file.name}...`);
+                setStatus(`Decoding ${file.name}...`);
                 try {
                     const arrayBuf = await file.arrayBuffer();
                     const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
@@ -357,23 +443,25 @@
 
                     if (i === 0) {
                         activeAudioBuffer = audioBuf;
+                        resetSliceGrid();
                         drawWaveform(audioBuf);
                         updateStats(audioBuf);
                     }
                 } catch (err) {
-                    setStatus(`Error loading ${file.name}: ${err.message}`);
+                    setStatus(`Error decoding ${file.name}: ${err.message}`);
                 }
             }
-            setStatus(`Loaded ${files.length} sample(s) into memory pool.`);
+            setStatus(`Loaded ${files.length} audio file(s) into memory pool.`);
         });
 
         function loadSelectedSample() {
             const name = document.getElementById('globalTrackSelect').value;
             if (soundPool.has(name)) {
                 activeAudioBuffer = soundPool.get(name);
+                resetSliceGrid();
                 drawWaveform(activeAudioBuffer);
                 updateStats(activeAudioBuffer);
-                setStatus(`Active sample set to: ${name}`);
+                setStatus(`Selected sample: ${name}`);
             }
         }
 
@@ -381,7 +469,7 @@
             document.getElementById('audioStats').textContent = `${buf.duration.toFixed(2)}s | ${buf.sampleRate}Hz | ${buf.numberOfChannels}Ch`;
         }
 
-        // Waveform Drawing
+        // Waveform Visualizer & Trim Handles Render
         function drawWaveform(buffer) {
             const width = waveformCanvas.width = waveformCanvas.parentElement.clientWidth;
             const height = waveformCanvas.height = waveformCanvas.parentElement.clientHeight;
@@ -390,6 +478,9 @@
             canvasCtx.fillRect(0, 0, width, height);
 
             if (!buffer) return;
+
+            const tStart = parseFloat(document.getElementById('trimStart').value) / 100;
+            const tEnd = parseFloat(document.getElementById('trimEnd').value) / 100;
 
             const data = buffer.getChannelData(0);
             const step = Math.ceil(data.length / width);
@@ -410,19 +501,24 @@
                 canvasCtx.lineTo(i, (1 + max) * amp);
             }
             canvasCtx.stroke();
+
+            // Render Trim Markers
+            canvasCtx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+            canvasCtx.fillRect(0, 0, tStart * width, height);
+            canvasCtx.fillRect(tEnd * width, 0, (1 - tEnd) * width, height);
         }
 
-        // Playback Engine
+        // Dynamic Transport Playback
         function playActiveBuffer() {
             unlockAudioEngine();
-            if (!activeAudioBuffer) return setStatus('No audio loaded!');
+            if (!activeAudioBuffer) return setStatus('No audio loaded to play!');
             stopAllAudio();
 
             activeSourceNode = audioCtx.createBufferSource();
             activeSourceNode.buffer = activeAudioBuffer;
             activeSourceNode.connect(audioCtx.destination);
             activeSourceNode.start(0);
-            setStatus('Playing back sample...');
+            setStatus('Playing active sample buffer...');
         }
 
         function stopAllAudio() {
@@ -434,17 +530,61 @@
             setStatus('Audio stopped.');
         }
 
+        // Dynamic Sliders Label Updating
+        ['grainSize', 'grainDensity', 'grainSpray', 'grainPitch', 'stretchRatio', 'stretchWindow', 'stretchDiffuse', 'stretchPitch', 'trimStart', 'trimEnd'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('input', (e) => {
+                    const target = document.getElementById(`val-${id.replace(/([A-Z])/g, "-$1").toLowerCase()}`);
+                    if (target) target.textContent = e.target.value;
+                });
+            }
+        });
+
+        // Toggle Custom Export Duration Inputs
+        function toggleGranularCustomDuration() {
+            const val = document.getElementById('granularDurationSelect').value;
+            const customInput = document.getElementById('granularCustomSec');
+            if (val === 'custom') customInput.classList.remove('hidden');
+            else customInput.classList.add('hidden');
+        }
+
+        function toggleStretchCustomDuration() {
+            const val = document.getElementById('stretchDurationSelect').value;
+            const customInput = document.getElementById('stretchCustomSec');
+            if (val === 'custom') customInput.classList.remove('hidden');
+            else customInput.classList.add('hidden');
+        }
+
         // ==========================================
-        // MODULE 1: LOOP SCRAMBLER & BPM DETECTOR
+        // MODULE 1: LOOP SCRAMBLER & SLICER
         // ==========================================
+        function resetSliceGrid() {
+            const count = parseInt(document.getElementById('scrambleSlices').value, 10);
+            const grid = document.getElementById('sliceGrid');
+            grid.innerHTML = '';
+            sliceSequence = Array.from({length: count}, (_, i) => i);
+
+            sliceSequence.forEach((sliceIdx, i) => {
+                const cell = document.createElement('div');
+                cell.className = 'slice-cell bg-slate-900 border border-slate-700 text-center py-2 text-[10px] font-mono text-amber-300 rounded cursor-pointer hover:border-amber-400';
+                cell.textContent = `${i + 1}:${sliceIdx + 1}`;
+                cell.onclick = () => {
+                    // Manual shift slice index on click
+                    sliceSequence[i] = (sliceSequence[i] + 1) % count;
+                    cell.textContent = `${i + 1}:${sliceSequence[i] + 1}`;
+                };
+                grid.appendChild(cell);
+            });
+        }
+
         function detectBPM() {
             if (!activeAudioBuffer) return setStatus('Load an audio sample first!');
             const data = activeAudioBuffer.getChannelData(0);
             const sr = activeAudioBuffer.sampleRate;
 
-            // Simple Onset Peak Energy Counter
             let peaks = 0;
-            const step = Math.floor(sr * 0.05); // 50ms windows
+            const step = Math.floor(sr * 0.05);
             for (let i = 0; i < data.length - step; i += step) {
                 let energy = 0;
                 for (let j = 0; j < step; j++) energy += Math.abs(data[i + j]);
@@ -454,7 +594,7 @@
             const estimatedBPM = Math.round((peaks / activeAudioBuffer.duration) * 15);
             const clampedBPM = Math.max(70, Math.min(180, estimatedBPM));
             document.getElementById('bpmDisplay').textContent = `BPM: ${clampedBPM}`;
-            setStatus(`Detected estimated BPM: ~${clampedBPM}`);
+            setStatus(`Detected loop tempo: ~${clampedBPM} BPM`);
         }
 
         function runScramble() {
@@ -462,30 +602,34 @@
 
             const sliceCount = parseInt(document.getElementById('scrambleSlices').value, 10);
             const useEnv = document.getElementById('scrambleEnvelope').value === 'true';
+            const tStart = parseFloat(document.getElementById('trimStart').value) / 100;
+            const tEnd = parseFloat(document.getElementById('trimEnd').value) / 100;
 
             const chans = activeAudioBuffer.numberOfChannels;
-            const totalSamples = activeAudioBuffer.length;
-            const sliceSamples = Math.floor(totalSamples / sliceCount);
+            const startFrame = Math.floor(activeAudioBuffer.length * tStart);
+            const endFrame = Math.floor(activeAudioBuffer.length * tEnd);
+            const trimLength = endFrame - startFrame;
+            const sliceSamples = Math.floor(trimLength / sliceCount);
 
-            const scrambled = audioCtx.createBuffer(chans, totalSamples, activeAudioBuffer.sampleRate);
+            const scrambled = audioCtx.createBuffer(chans, trimLength, activeAudioBuffer.sampleRate);
 
-            // Scramble sequence array
-            const seq = Array.from({length: sliceCount}, (_, i) => i);
-            for (let i = seq.length - 1; i > 0; i--) {
+            // Generate scrambled array sequence
+            for (let i = sliceSequence.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                [seq[i], seq[j]] = [seq[j], seq[i]];
+                [sliceSequence[i], sliceSequence[j]] = [sliceSequence[j], sliceSequence[i]];
             }
+            resetSliceGrid();
 
             for (let c = 0; c < chans; c++) {
                 const inData = activeAudioBuffer.getChannelData(c);
                 const outData = scrambled.getChannelData(c);
 
                 for (let i = 0; i < sliceCount; i++) {
-                    const srcOffset = seq[i] * sliceSamples;
+                    const srcOffset = startFrame + (sliceSequence[i] * sliceSamples);
                     const destOffset = i * sliceSamples;
 
                     for (let s = 0; s < sliceSamples; s++) {
-                        let val = inData[srcOffset + s];
+                        let val = inData[srcOffset + s] || 0;
                         if (useEnv) {
                             if (s < 64) val *= (s / 64);
                             else if (s > sliceSamples - 64) val *= ((sliceSamples - s) / 64);
@@ -498,7 +642,7 @@
             activeAudioBuffer = scrambled;
             drawWaveform(scrambled);
             playActiveBuffer();
-            setStatus(`Scrambled into ${sliceCount} slices with de-click envelope.`);
+            setStatus(`Scrambled into ${sliceCount} slices with crossfade protection.`);
         }
 
         function exportScrambleWav() {
@@ -511,17 +655,6 @@
         // ==========================================
         // MODULE 2: IPAD GRANULAR STUDIO
         // ==========================================
-        // Range Sync
-        ['grainSize', 'grainDensity', 'grainSpray', 'grainPitch', 'stretchRatio', 'stretchDiffuse'].forEach(id => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.addEventListener('input', (e) => {
-                    const target = document.getElementById(`val-${id.replace(/([A-Z])/g, "-$1").toLowerCase()}`);
-                    if (target) target.textContent = e.target.value;
-                });
-            }
-        });
-
         function drawGranularPad() {
             const w = granularPad.width = granularPad.parentElement.clientWidth;
             const h = granularPad.height = granularPad.parentElement.clientHeight;
@@ -529,7 +662,6 @@
             padCtx.fillStyle = '#090a0f';
             padCtx.fillRect(0, 0, w, h);
 
-            // Crosshair
             padCtx.strokeStyle = '#00f2fe';
             padCtx.lineWidth = 1;
             padCtx.beginPath();
@@ -538,7 +670,6 @@
             padCtx.stroke();
         }
 
-        // Granular Pad Touch Listener
         granularPad.addEventListener('pointermove', (e) => {
             if (e.buttons === 1 || e.pointerType === 'touch') {
                 const rect = granularPad.getBoundingClientRect();
@@ -557,7 +688,7 @@
                 isGranularActive = false;
                 btn.textContent = 'Start Granular Stream';
                 btn.className = 'flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition active:scale-95';
-                setStatus('Granular stream paused.');
+                setStatus('Granular stream stopped.');
             } else {
                 isGranularActive = true;
                 btn.textContent = 'Stop Granular Stream';
@@ -565,7 +696,7 @@
 
                 const density = parseInt(document.getElementById('grainDensity').value, 10);
                 granularInterval = setInterval(triggerGrain, Math.max(10, 1000 / density));
-                setStatus('Granular stream playing.');
+                setStatus('Granular stream active.');
             }
         }
 
@@ -599,11 +730,21 @@
 
         async function exportGranularWav() {
             if (!activeAudioBuffer) return setStatus('Load audio buffer first!');
-            setStatus('Rendering 5s granular freeze...');
+
+            // Calculate Export Duration Choice
+            let renderSec = 5;
+            const durChoice = document.getElementById('granularDurationSelect').value;
+            if (durChoice === 'custom') {
+                renderSec = parseFloat(document.getElementById('granularCustomSec').value) || 5;
+            } else {
+                renderSec = parseFloat(durChoice);
+            }
+
+            setStatus(`Rendering ${renderSec}s granular audio to WAV...`);
 
             const offlineCtx = new OfflineAudioContext(
                 activeAudioBuffer.numberOfChannels,
-                activeAudioBuffer.sampleRate * 5,
+                activeAudioBuffer.sampleRate * renderSec,
                 activeAudioBuffer.sampleRate
             );
 
@@ -612,7 +753,7 @@
             const pitchShift = parseFloat(document.getElementById('grainPitch').value);
             const grainDuration = grainSizeMs / 1000;
 
-            for (let t = 0; t < 5; t += (1 / density)) {
+            for (let t = 0; t < renderSec; t += (1 / density)) {
                 const src = offlineCtx.createBufferSource();
                 src.buffer = activeAudioBuffer;
                 src.playbackRate.value = Math.pow(2, pitchShift / 12);
@@ -629,8 +770,8 @@
 
             const rendered = await offlineCtx.startRendering();
             const wavBlob = bufferToWave(rendered, rendered.length);
-            downloadBlob(wavBlob, 'granular-render.wav');
-            setStatus('Granular WAV render exported.');
+            downloadBlob(wavBlob, `granular-${renderSec}s-render.wav`);
+            setStatus(`Exported ${renderSec}s Granular WAV file.`);
         }
 
         // ==========================================
@@ -638,24 +779,39 @@
         // ==========================================
         async function processStretch() {
             if (!activeAudioBuffer) return setStatus('Load audio sample first!');
+
             const stretchRatio = parseFloat(document.getElementById('stretchRatio').value);
+            const windowSizeMs = parseFloat(document.getElementById('stretchWindow').value);
+            const pitchShift = parseFloat(document.getElementById('stretchPitch').value);
 
-            setStatus(`Processing STFT spectral stretch (${stretchRatio}x)...`);
+            const nativeLengthSec = activeAudioBuffer.duration * stretchRatio;
 
-            const outLength = Math.floor(activeAudioBuffer.length * stretchRatio);
+            // Calculate Export Duration Choice
+            let renderSec = nativeLengthSec;
+            const durChoice = document.getElementById('stretchDurationSelect').value;
+            if (durChoice === 'custom') {
+                renderSec = parseFloat(document.getElementById('stretchCustomSec').value) || 30;
+            } else if (durChoice !== 'full') {
+                renderSec = parseFloat(durChoice);
+            }
+
+            setStatus(`Processing spectral stretch (${stretchRatio}x). Total duration: ${renderSec.toFixed(1)}s...`);
+
+            const totalSamples = Math.floor(activeAudioBuffer.sampleRate * renderSec);
             const offlineCtx = new OfflineAudioContext(
                 activeAudioBuffer.numberOfChannels,
-                outLength,
+                totalSamples,
                 activeAudioBuffer.sampleRate
             );
 
-            const windowSize = 0.2;
+            const windowSize = windowSizeMs / 1000;
             const hopInput = windowSize / 4;
             const hopOutput = hopInput * stretchRatio;
 
-            for (let tIn = 0, tOut = 0; tIn < activeAudioBuffer.duration - windowSize; tIn += hopInput, tOut += hopOutput) {
+            for (let tIn = 0, tOut = 0; tOut < renderSec && tIn < activeAudioBuffer.duration - windowSize; tIn += hopInput, tOut += hopOutput) {
                 const src = offlineCtx.createBufferSource();
                 src.buffer = activeAudioBuffer;
+                src.playbackRate.value = Math.pow(2, pitchShift / 12);
 
                 const env = offlineCtx.createGain();
                 env.gain.setValueAtTime(0.001, tOut);
@@ -673,8 +829,8 @@
             playActiveBuffer();
 
             const wavBlob = bufferToWave(stretched, stretched.length);
-            downloadBlob(wavBlob, `paulstretch-${stretchRatio}x.wav`);
-            setStatus(`Ambient stretch completed (${stretchRatio}x length).`);
+            downloadBlob(wavBlob, `paulstretch-${stretchRatio}x-${Math.round(renderSec)}s.wav`);
+            setStatus(`Spectral ambient stretch completed (${renderSec.toFixed(1)}s output).`);
         }
 
         // ==========================================
@@ -698,7 +854,6 @@
                 osc.start(now);
                 osc.stop(now + 0.15);
             } else {
-                // Noise generator for snare/hat
                 const bufferSize = audioCtx.sampleRate * 0.1;
                 const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const output = noiseBuf.getChannelData(0);
@@ -736,23 +891,33 @@
                 if (rms > thresholdVal && (i - lastOnsetSample) > (sampleRate * 0.1)) {
                     midiEvents.push({
                         time: i / sampleRate,
-                        note: 36, // General MIDI Kick
+                        note: 36, // General MIDI Kick Note
                         velocity: Math.min(127, Math.floor(rms * 127 * 2))
                     });
                     lastOnsetSample = i;
                 }
             }
 
-            if (!midiEvents.length) return setStatus('No drum transients found. Lower threshold.');
+            if (!midiEvents.length) return setStatus('No transients detected. Lower sensitivity threshold.');
 
             const midiBlob = generateMidiFile(midiEvents);
             downloadBlob(midiBlob, 'drum-transients.mid');
-            setStatus(`Extracted ${midiEvents.length} drum triggers to MIDI.`);
+            setStatus(`Extracted ${midiEvents.length} drum hits to MIDI!`);
         }
 
         // ==========================================
-        // MODULE 5: MELODY & CHORD TO MIDI
+        // MODULE 5: MELODY & CHORD TO MIDI MERGER
         // ==========================================
+        function applyPitchPreset() {
+            const preset = document.getElementById('pitchPreset').value;
+            const conf = document.getElementById('pitchConfidence');
+            if (preset === 'vocal') conf.value = 75;
+            if (preset === 'piano') conf.value = 60;
+            if (preset === 'guitar') conf.value = 70;
+            if (preset === 'bass') conf.value = 80;
+            setStatus(`Applied ${preset} pitch preset settings.`);
+        }
+
         function extractPitchMIDI() {
             if (!activeAudioBuffer) return setStatus('Load audio file first!');
 
@@ -777,7 +942,7 @@
                         midiEvents.push({ time, note: midiNote, velocity: 90 });
                         
                         const logItem = document.createElement('div');
-                        logItem.textContent = `[${time.toFixed(2)}s] Pitch: ${pitch.toFixed(1)}Hz -> MIDI Note ${midiNote}`;
+                        logItem.textContent = `[${time.toFixed(2)}s] Frequency: ${pitch.toFixed(1)}Hz | Note: MIDI ${midiNote}`;
                         noteLog.appendChild(logItem);
 
                         lastPitch = midiNote;
@@ -789,9 +954,45 @@
 
             const midiBlob = generateMidiFile(midiEvents);
             downloadBlob(midiBlob, 'melody-pitch.mid');
-            setStatus(`Extracted ${midiEvents.length} pitch events to MIDI.`);
+            setStatus(`Extracted ${midiEvents.length} melodic notes to MIDI.`);
         }
 
+        function mergeAllPoolMIDI() {
+            if (soundPool.size === 0) return setStatus('No sample pool available to merge!');
+
+            const mergedEvents = [];
+            let timeOffset = 0;
+
+            soundPool.forEach((buf, name) => {
+                const channelData = buf.getChannelData(0);
+                const sampleRate = buf.sampleRate;
+                const windowSize = 2048;
+                const hopSize = 512;
+                let lastPitch = -1;
+
+                for (let i = 0; i < channelData.length - windowSize; i += hopSize) {
+                    const pitch = autoCorrelate(channelData.slice(i, i + windowSize), sampleRate);
+                    if (pitch !== -1) {
+                        const midiNote = Math.round(69 + 12 * Math.log2(pitch / 440));
+                        if (midiNote !== lastPitch && midiNote >= 21 && midiNote <= 108) {
+                            mergedEvents.push({
+                                time: timeOffset + (i / sampleRate),
+                                note: midiNote,
+                                velocity: 90
+                            });
+                            lastPitch = midiNote;
+                        }
+                    }
+                }
+                timeOffset += buf.duration;
+            });
+
+            const midiBlob = generateMidiFile(mergedEvents);
+            downloadBlob(midiBlob, 'merged-sample-pool.mid');
+            setStatus(`Merged ${soundPool.size} audio files into unified MIDI!`);
+        }
+
+        // YIN Pitch Autocorrelation Detection
         function autoCorrelate(buffer, sampleRate) {
             let SIZE = buffer.length;
             let rms = 0;
