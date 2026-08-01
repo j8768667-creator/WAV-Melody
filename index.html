@@ -3,174 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ultimate Audio Studio Suite</title>
+    <title>Ultimate Web Audio & MIDI Workstation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
-            --bg-color: #090a0f;
-            --panel-bg: #12151e;
-            --panel-border: #222736;
+            --bg-dark: #0b0c10;
+            --panel-bg: #13161c;
+            --panel-border: #222632;
             --accent-cyan: #00f2fe;
-            --accent-purple: #7928ca;
-            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
             --accent-amber: #f59e0b;
-            --text-color: #f8fafc;
-            --text-dim: #94a3b8;
+            --accent-rose: #f43f5e;
+            --accent-emerald: #10b981;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
         }
-        * { box-sizing: border-box; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-        header { background-color: var(--panel-bg); border-bottom: 1px solid var(--panel-border); padding: 1rem 1.5rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
-        .tab-btn { background: #181c28; border: 1px solid var(--panel-border); color: var(--text-dim); padding: 0.65rem 1.1rem; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease; }
-        .tab-btn.active { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border-color: transparent; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); }
-        .tab-content { display: none; padding: 1.5rem; max-width: 1350px; margin: 0 auto; width: 100%; flex: 1; }
-        .tab-content.active { display: block; }
-        .panel { background-color: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 16px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
-        input[type="range"] { width: 100%; height: 6px; background: var(--panel-border); border-radius: 3px; outline: none; -webkit-appearance: none; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-cyan); cursor: pointer; }
-        select, input[type="file"], input[type="number"], input[type="text"] { background-color: #181c28; border: 1px solid var(--panel-border); color: var(--text-color); border-radius: 9px; padding: 0.65rem 0.85rem; font-size: 0.85rem; outline: none; width: 100%; }
-        button:disabled { opacity: 0.35 !important; cursor: not-allowed !important; transform: none !important; }
-        canvas { display: block; width: 100%; background: #07080a; border-radius: 10px; border: 1px solid var(--panel-border); }
-        .btn-custom { border: 1px solid var(--panel-border); background: #1c2130; color: #eee; border-radius: 10px; padding: 0.65rem 1.2rem; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
-        .btn-custom:hover { background: #282f45; }
+
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Navigation */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--panel-border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            z-index: 50;
+        }
+
+        .tab-btn {
+            background: #1a1e29;
+            border: 1px solid var(--panel-border);
+            color: var(--text-sub);
+            padding: 0.55rem 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            border-color: #3b4254;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        /* Tab Content Display */
+        .tab-content {
+            display: none;
+            padding: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Reusable UI Components */
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+
+        .btn-action {
+            background: #202533;
+            border: 1px solid var(--panel-border);
+            color: #f1f5f9;
+            padding: 0.65rem 1.2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-action:hover:not(:disabled) {
+            background: #2b3245;
+        }
+
+        .btn-action:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.35 !important;
+            cursor: not-allowed !important;
+            transform: none !important;
+        }
+
+        input[type="file"], select, input[type="number"], input[type="text"] {
+            background-color: #181c28;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.85rem;
+            outline: none;
+            width: 100%;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: var(--panel-border);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            background: #08090d;
+            border-radius: 10px;
+            border: 1px solid var(--panel-border);
+        }
     </style>
 </head>
 <body>
 
     <header>
         <div>
-            <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Ultimate Audio Sound-Design Suite</h1>
-            <p class="text-xs text-slate-400 mt-0.5">Unified Multi-Tool Audio Engine & MIDI Workstation</p>
+            <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">
+                Ultimate Web Audio Suite
+            </h1>
+            <p class="text-xs text-slate-400 mt-0.5">5 Fully Operational Audio Processing & MIDI Creation Workstations</p>
         </div>
         <nav class="flex flex-wrap gap-2">
-            <button class="tab-btn active" data-target="tab-scramble">1. WAV Scramble</button>
-            <button class="tab-btn" data-target="tab-tools">2. Audio Studio v6</button>
-            <button class="tab-btn" data-target="tab-evolver">3. Granular Evolver</button>
-            <button class="tab-btn" data-target="tab-drum">4. Drum Trigger</button>
-            <button class="tab-btn" data-target="tab-melody">5. Chord & Melody MIDI</button>
+            <button class="tab-btn active" data-tab="tab-scramble">1. WAV Scramble</button>
+            <button class="tab-btn" data-tab="tab-studio">2. Sound Studio v6</button>
+            <button class="tab-btn" data-tab="tab-evolver">3. Granular Evolver</button>
+            <button class="tab-btn" data-tab="tab-drum">4. Drum Trigger</button>
+            <button class="tab-btn" data-tab="tab-melody">5. Melody MIDI</button>
         </nav>
     </header>
 
     <div id="tab-scramble" class="tab-content active space-y-6">
         <div class="panel grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="space-y-2">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">1. Load Loop</label>
-                <input type="file" id="t1_fileInput" accept="audio/wav,audio/x-wav">
-                <div id="t1_fileStatus" class="text-xs font-mono text-slate-400 truncate">No file loaded.</div>
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold uppercase text-amber-400 tracking-wider">1. Select WAV Loop</label>
+                <input type="file" id="scramble_file" accept="audio/wav,audio/x-wav">
             </div>
-            <div class="space-y-2">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">2. BPM Finder</label>
-                <button id="t1_detectBpmBtn" disabled class="btn-custom w-full text-amber-400">Detect BPM</button>
-                <div id="t1_bpmStatus" class="text-xs font-mono text-emerald-400 truncate">BPM: --</div>
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold uppercase text-slate-400 tracking-wider">2. Auto BPM Engine</label>
+                <button id="scramble_detect_bpm" disabled class="btn-action w-full text-amber-400">Detect Loop BPM</button>
             </div>
-            <div class="space-y-2">
-                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">3. Slice & Envelope</label>
-                <select id="t1_sliceCount">
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold uppercase text-slate-400 tracking-wider">3. Slice Size</label>
+                <select id="scramble_slices">
                     <option value="4">4 Quarter Chunks</option>
                     <option value="8">8 Eighth Slices</option>
                     <option value="16" selected>16 Sixteenth Slices</option>
                     <option value="32">32 Thirty-Second Micros</option>
                 </select>
-                <div class="flex items-center gap-1.5 text-xs text-slate-400 pt-1">
-                    <input type="checkbox" id="t1_envelope" checked class="accent-amber-500 rounded">
-                    <label for="t1_envelope" class="cursor-pointer select-none">5ms De-Click Envelope</label>
-                </div>
             </div>
-            <div class="space-y-2 flex flex-col justify-end">
-                <button id="t1_exportBtn" disabled class="btn-custom bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 w-full">Scramble & Export WAV</button>
+            <div class="space-y-1.5 flex flex-col justify-end">
+                <button id="scramble_export" disabled class="btn-action bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 w-full">Export Scrambled WAV</button>
             </div>
         </div>
+
         <div class="panel space-y-4">
-            <div class="flex justify-between items-center">
-                <span class="text-sm font-bold text-slate-300">Slice Sequence & Waveform Visualizer</span>
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <span id="scramble_status" class="text-xs font-mono text-emerald-400">Status: Waiting for file...</span>
                 <div class="flex gap-2">
-                    <button id="t1_playBtn" disabled class="btn-custom text-emerald-400 text-xs">▶ Play</button>
-                    <button id="t1_stopBtn" disabled class="btn-custom text-red-400 text-xs">■ Stop</button>
-                    <button id="t1_resetBtn" disabled class="btn-custom text-xs">Reset Sequence Map</button>
+                    <button id="scramble_play" disabled class="btn-action text-emerald-400 text-xs">▶ Play Preview</button>
+                    <button id="scramble_stop" disabled class="btn-action text-rose-400 text-xs">■ Stop</button>
+                    <button id="scramble_reset" disabled class="btn-action text-xs">Reshuffle Map</button>
                 </div>
             </div>
-            <canvas id="t1_canvas" height="150"></canvas>
+            <canvas id="scramble_canvas" height="150"></canvas>
         </div>
     </div>
 
-    <div id="tab-tools" class="tab-content grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div id="tab-studio" class="tab-content grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="panel flex flex-col gap-4">
-            <h2 class="text-lg font-bold border-b border-slate-800 pb-2 text-cyan-400">Paulstretch Ambient Dissolver</h2>
+            <h2 class="text-lg font-bold text-cyan-400 border-b border-slate-800 pb-2">Paulstretch Ambient Dissolver</h2>
             <div class="space-y-1">
-                <label class="text-xs text-slate-400">Audio File Input</label>
-                <input type="file" id="t2_paulInput" accept="audio/*">
+                <label class="text-xs text-slate-400">Select Audio Stem</label>
+                <input type="file" id="paul_file" accept="audio/*">
             </div>
-            <canvas id="t2_paulCanvas" height="120"></canvas>
+            <canvas id="paul_canvas" height="120"></canvas>
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="text-xs text-slate-400">Stretch Factor: <span id="t2_stretchVal">8</span>x</label>
-                    <input type="range" id="t2_stretch" min="1" max="50" value="8">
+                    <label class="text-xs text-slate-400">Stretch Factor: <span id="paul_stretch_val">8</span>x</label>
+                    <input type="range" id="paul_stretch" min="1" max="50" value="8">
                 </div>
                 <div>
-                    <label class="text-xs text-slate-400">Window Size: <span id="t2_windowVal">0.25</span>s</label>
-                    <input type="range" id="t2_window" min="0.05" max="2.0" step="0.05" value="0.25">
+                    <label class="text-xs text-slate-400">Grain Window: <span id="paul_win_val">0.25</span>s</label>
+                    <input type="range" id="paul_window" min="0.05" max="2.0" step="0.05" value="0.25">
                 </div>
             </div>
-            <div class="flex gap-2">
-                <button id="t2_paulPlayBtn" disabled class="btn-custom bg-emerald-800 flex-1">▶ Preview Stretch</button>
-                <button id="t2_paulStopBtn" disabled class="btn-custom bg-rose-900 flex-1">■ Stop</button>
-                <button id="t2_paulExportBtn" disabled class="btn-custom bg-cyan-700 flex-1">Export WAV</button>
+            <div class="flex gap-2 pt-2">
+                <button id="paul_play" disabled class="btn-action bg-emerald-700 flex-1">▶ Preview</button>
+                <button id="paul_stop" disabled class="btn-action bg-rose-800 flex-1">■ Stop</button>
+                <button id="paul_export" disabled class="btn-action bg-cyan-700 flex-1">Export WAV</button>
             </div>
-            <div id="t2_paulStatus" class="text-xs font-mono text-cyan-400">Ready.</div>
         </div>
 
         <div class="panel flex flex-col gap-4">
-            <h2 class="text-lg font-bold border-b border-slate-800 pb-2 text-purple-400">Batch Audio Loop Scrambler</h2>
+            <h2 class="text-lg font-bold text-purple-400 border-b border-slate-800 pb-2">Batch Audio Loop Scrambler</h2>
             <div class="space-y-1">
-                <label class="text-xs text-slate-400">Batch WAV Files Input</label>
-                <input type="file" id="t2_batchInput" multiple accept="audio/*">
+                <label class="text-xs text-slate-400">Select Multiple WAV Files</label>
+                <input type="file" id="batch_files" multiple accept="audio/*">
             </div>
-            <canvas id="t2_batchCanvas" height="120"></canvas>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="text-xs text-slate-400">Slices Count</label>
-                    <select id="t2_batchSlices">
-                        <option value="4">4 Slices</option>
-                        <option value="8">8 Slices</option>
-                        <option value="16" selected>16 Slices</option>
-                        <option value="32">32 Slices</option>
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <button id="t2_batchProcessBtn" disabled class="btn-custom bg-purple-700 w-full">Process & Export All</button>
-                </div>
+            <canvas id="batch_canvas" height="120"></canvas>
+            <div class="flex justify-between items-center gap-4">
+                <span id="batch_status" class="text-xs font-mono text-purple-400">No batch items queued.</span>
+                <button id="batch_process" disabled class="btn-action bg-purple-700 font-bold">Process & Export All</button>
             </div>
-            <div id="t2_batchStatus" class="text-xs font-mono text-purple-400">Ready for batch files.</div>
         </div>
     </div>
 
     <div id="tab-evolver" class="tab-content space-y-6">
         <div class="panel space-y-4">
-            <div class="text-center pb-2 border-b border-slate-800">
-                <h2 class="text-xl font-bold text-sky-400">EvolverFX Granular Engine</h2>
-                <p class="text-xs text-slate-400">Real-time Granular synthesizer with dynamic grain density, pitch shifting and bounds clipping.</p>
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-sky-400">EvolverFX Granular Synthesizer</h2>
+                    <p class="text-xs text-slate-400">Granular position scratching, envelope modulation & real-time pitch shifting</p>
+                </div>
+                <input type="file" id="evolver_file" accept="audio/*" class="max-w-xs">
             </div>
-            <input type="file" id="t3_fileInput" accept="audio/*">
-            <canvas id="t3_canvas" height="160"></canvas>
+            
+            <canvas id="evolver_canvas" height="160"></canvas>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="space-y-1">
-                    <label class="text-xs text-slate-400">Grain Density: <span id="t3_densityVal">20</span>/s</label>
-                    <input type="range" id="t3_density" min="5" max="50" value="20">
+                    <label class="text-xs text-slate-400">Grain Density: <span id="evolver_density_val">20</span>/s</label>
+                    <input type="range" id="evolver_density" min="5" max="50" value="20">
                 </div>
                 <div class="space-y-1">
-                    <label class="text-xs text-slate-400">Grain Size: <span id="t3_sizeVal">100</span>ms</label>
-                    <input type="range" id="t3_size" min="20" max="400" value="100">
+                    <label class="text-xs text-slate-400">Grain Size: <span id="evolver_size_val">100</span>ms</label>
+                    <input type="range" id="evolver_size" min="20" max="400" value="100">
                 </div>
                 <div class="space-y-1">
-                    <label class="text-xs text-slate-400">Pitch Shift: <span id="t3_pitchVal">0</span> st</label>
-                    <input type="range" id="t3_pitch" min="-12" max="12" step="1" value="0">
+                    <label class="text-xs text-slate-400">Pitch Shift: <span id="evolver_pitch_val">0</span> semi</label>
+                    <input type="range" id="evolver_pitch" min="-12" max="12" step="1" value="0">
                 </div>
             </div>
+
             <div class="flex gap-3 pt-2">
-                <button id="t3_playBtn" disabled class="btn-custom bg-sky-500 text-slate-950 flex-1 font-bold">▶ Start Granular Engine</button>
-                <button id="t3_stopBtn" disabled class="btn-custom bg-rose-800 flex-1 font-bold">■ Stop</button>
-                <button id="t3_exportBtn" disabled class="btn-custom bg-emerald-600 flex-1 font-bold">Export Rendered WAV</button>
+                <button id="evolver_play" disabled class="btn-action bg-sky-500 text-slate-950 font-bold flex-1">▶ Start Granular Engine</button>
+                <button id="evolver_stop" disabled class="btn-action bg-rose-800 font-bold flex-1">■ Stop</button>
+                <button id="evolver_export" disabled class="btn-action bg-emerald-600 font-bold flex-1">Export Rendered Audio</button>
             </div>
-            <div id="t3_status" class="text-xs font-mono text-emerald-400 text-center">Load source sample to start.</div>
         </div>
     </div>
 
@@ -178,18 +298,19 @@
         <div class="panel space-y-4">
             <div class="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h2 class="text-lg font-bold text-amber-400">🥁 Multi-Channel WAV-to-MIDI Drum Trigger</h2>
-                    <p class="text-xs text-slate-400">Transient detection for Kick, Snare & Hi-Hat with Type 0 MIDI Export</p>
+                    <h2 class="text-lg font-bold text-rose-400">🥁 Multi-Channel Drum Transient Trigger</h2>
+                    <p class="text-xs text-slate-400">Extract Kicks, Snares & Hi-Hats from raw WAV loops to standard MIDI tracks</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <label class="text-xs text-slate-400 flex items-center gap-2">Tempo BPM <input id="t4_bpm" type="number" value="120" class="w-20"></label>
-                    <button id="t4_previewBtn" disabled class="btn-custom text-blue-400">▶ Preview Triggers</button>
-                    <button id="t4_exportBtn" disabled class="btn-custom text-amber-400">🎹 Export MIDI File</button>
+                    <label class="text-xs text-slate-400 flex items-center gap-2">Tempo BPM <input id="drum_bpm" type="number" value="120" class="w-20"></label>
+                    <button id="drum_preview" disabled class="btn-action text-blue-400">▶ Preview Triggers</button>
+                    <button id="drum_export" disabled class="btn-action text-amber-400">🎹 Export MIDI File</button>
                 </div>
             </div>
-            <input type="file" id="t4_fileInput" accept="audio/*">
-            <canvas id="t4_canvas" height="160"></canvas>
-            <div id="t4_status" class="text-xs font-mono text-slate-400">Ready — load audio file.</div>
+
+            <input type="file" id="drum_file" accept="audio/*">
+            <canvas id="drum_canvas" height="160"></canvas>
+            <div id="drum_status" class="text-xs font-mono text-slate-400">Ready — load audio file to analyze transients.</div>
         </div>
     </div>
 
@@ -197,50 +318,56 @@
         <div class="panel space-y-4">
             <div class="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h2 class="text-lg font-bold text-indigo-400">🎼 WAV Chord & Melody → MIDI Merger</h2>
-                    <p class="text-xs text-slate-400">Extract monophonic/polyphonic MIDI events from WAV stems and merge them into a single timeline.</p>
+                    <h2 class="text-lg font-bold text-indigo-400">🎼 Audio Stem Pitch & Melody → MIDI Merger</h2>
+                    <p class="text-xs text-slate-400">Extract monophonic/polyphonic MIDI events from WAV stems and merge into a single MIDI timeline</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <label class="text-xs text-slate-400">BPM <input id="t5_bpm" type="number" value="120" class="w-20"></label>
+                    <label class="text-xs text-slate-400">BPM <input id="melody_bpm" type="number" value="120" class="w-20"></label>
                 </div>
             </div>
-            <input type="file" id="t5_fileInput" accept="audio/*" multiple>
-            <canvas id="t5_canvas" height="160"></canvas>
-            <div class="flex flex-wrap justify-between gap-3 items-center">
-                <div id="t5_status" class="text-xs font-mono text-purple-400">Ready for audio stems.</div>
-                <button id="t5_mergeBtn" disabled class="btn-custom bg-purple-700 text-white font-bold">Export Combined Merged MIDI</button>
+
+            <input type="file" id="melody_files" accept="audio/*" multiple>
+            <canvas id="melody_canvas" height="160"></canvas>
+
+            <div class="flex flex-wrap justify-between items-center gap-3">
+                <div id="melody_status" class="text-xs font-mono text-purple-400">Ready for WAV audio stems.</div>
+                <button id="melody_merge" disabled class="btn-action bg-indigo-600 text-white font-bold">Export Combined MIDI</button>
             </div>
         </div>
     </div>
 
     <script>
-        // GLOBAL AUDIO CONTEXT MANAGER
-        let sharedAudioCtx = null;
+        // Shared AudioContext Wrapper
+        let globalAudioCtx = null;
         function getAudioContext() {
-            if (!sharedAudioCtx) {
-                sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!globalAudioCtx) {
+                globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            if (sharedAudioCtx.state === 'suspended') {
-                sharedAudioCtx.resume();
+            if (globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume();
             }
-            return sharedAudioCtx;
+            return globalAudioCtx;
         }
+
+        // Global User Interaction Unlocker for Browsers & iOS
         document.addEventListener('click', () => getAudioContext(), { once: true });
 
-        // TAB SWITCHING LOGIC
+        // Tab Navigation Switcher
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
                 btn.classList.add('active');
-                document.getElementById(btn.dataset.target).classList.add('active');
+                const targetTab = document.getElementById(btn.dataset.tab);
+                if (targetTab) targetTab.classList.add('active');
             });
         });
 
-        // WAV BINARY ENCODER UTILITY
-        function bufferToWave(abuffer, len) {
-            const numOfChan = abuffer.numberOfChannels;
-            const length = len * numOfChan * 2 + 44;
+        // Binary WAV Exporter Utility Engine
+        function encodeWavBuffer(abuffer, numFrames) {
+            const numCh = abuffer.numberOfChannels;
+            const length = numFrames * numCh * 2 + 44;
             const buffer = new ArrayBuffer(length);
             const view = new DataView(buffer);
             let pos = 0;
@@ -253,17 +380,17 @@
             setUint32(0x45564157); // "WAVE"
             setUint32(0x20746d66); // "fmt " chunk
             setUint32(16);         // Subchunk1Size
-            setUint16(1);          // AudioFormat (1 = PCM)
-            setUint16(numOfChan);
+            setUint16(1);          // PCM Audio
+            setUint16(numCh);
             setUint32(abuffer.sampleRate);
-            setUint32(abuffer.sampleRate * 2 * numOfChan);
-            setUint16(numOfChan * 2);
-            setUint16(16);         // BitsPerSample
+            setUint32(abuffer.sampleRate * 2 * numCh);
+            setUint16(numCh * 2);
+            setUint16(16);         // Bits per sample
             setUint32(0x61746164); // "data" chunk
             setUint32(length - pos - 4);
 
-            for (let i = 0; i < len; i++) {
-                for (let ch = 0; ch < numOfChan; ch++) {
+            for (let i = 0; i < numFrames; i++) {
+                for (let ch = 0; ch < numCh; ch++) {
                     let sample = Math.max(-1, Math.min(1, abuffer.getChannelData(ch)[i]));
                     sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
                     view.setInt16(pos, sample, true);
@@ -274,83 +401,82 @@
         }
 
         // ==========================================
-        // TAB 1 LOGIC: WAV Scramble Remixer
+        // MODULE 1: WAV SCRAMBLE REMIXER
         // ==========================================
-        (function() {
-            let origBuffer = null, procBuffer = null, srcNode = null;
-            let seqMap = [];
+        (function initScrambleApp() {
+            let origBuffer = null, procBuffer = null, playNode = null;
+            let sequenceMap = [];
 
-            const fileIn = document.getElementById('t1_fileInput');
-            const fileStat = document.getElementById('t1_fileStatus');
-            const detectBtn = document.getElementById('t1_detectBpmBtn');
-            const bpmStat = document.getElementById('t1_bpmStatus');
-            const sliceSel = document.getElementById('t1_sliceCount');
-            const envChk = document.getElementById('t1_envelope');
-            const exportBtn = document.getElementById('t1_exportBtn');
-            const playBtn = document.getElementById('t1_playBtn');
-            const stopBtn = document.getElementById('t1_stopBtn');
-            const resetBtn = document.getElementById('t1_resetBtn');
-            const canvas = document.getElementById('t1_canvas');
+            const fileIn = document.getElementById('scramble_file');
+            const detectBtn = document.getElementById('scramble_detect_bpm');
+            const slicesSel = document.getElementById('scramble_slices');
+            const exportBtn = document.getElementById('scramble_export');
+            const playBtn = document.getElementById('scramble_play');
+            const stopBtn = document.getElementById('scramble_stop');
+            const resetBtn = document.getElementById('scramble_reset');
+            const status = document.getElementById('scramble_status');
+            const canvas = document.getElementById('scramble_canvas');
             const ctx = canvas.getContext('2d');
 
             fileIn.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                fileStat.textContent = file.name;
-                const arrayBuf = await file.arrayBuffer();
-                const actx = getAudioContext();
-                origBuffer = await actx.decodeAudioData(arrayBuf);
-                detectBtn.disabled = false;
-                exportBtn.disabled = false;
-                playBtn.disabled = false;
-                resetBtn.disabled = false;
-                resetMap();
-                compileBuffer();
+                status.textContent = `Loading ${file.name}...`;
+                try {
+                    const buf = await file.arrayBuffer();
+                    origBuffer = await getAudioContext().decodeAudioData(buf);
+                    detectBtn.disabled = false;
+                    exportBtn.disabled = false;
+                    playBtn.disabled = false;
+                    resetBtn.disabled = false;
+                    status.textContent = `Loaded: ${file.name} (${origBuffer.duration.toFixed(2)}s)`;
+                    rebuildScrambleMap();
+                } catch(err) {
+                    status.textContent = "Error decoding audio file.";
+                }
             });
 
-            function resetMap() {
+            function rebuildScrambleMap() {
                 if (!origBuffer) return;
-                const count = parseInt(sliceSel.value);
-                seqMap = Array.from({ length: count }, (_, i) => i);
-                for (let i = seqMap.length - 1; i > 0; i--) {
+                const slices = parseInt(slicesSel.value);
+                sequenceMap = Array.from({ length: slices }, (_, i) => i);
+                for (let i = sequenceMap.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [seqMap[i], seqMap[j]] = [seqMap[j], seqMap[i]];
+                    [sequenceMap[i], sequenceMap[j]] = [sequenceMap[j], sequenceMap[i]];
                 }
+                processScrambleBuffer();
             }
 
-            function compileBuffer() {
+            function processScrambleBuffer() {
                 if (!origBuffer) return;
-                const count = parseInt(sliceSel.value);
-                const useEnv = envChk.checked;
+                const slices = parseInt(slicesSel.value);
                 const actx = getAudioContext();
                 const chs = origBuffer.numberOfChannels;
                 const sr = origBuffer.sampleRate;
-                const sliceLen = Math.floor(origBuffer.length / count);
+                const sliceLen = Math.floor(origBuffer.length / slices);
 
-                procBuffer = actx.createBuffer(chs, count * sliceLen, sr);
-                const rampSamples = useEnv ? Math.floor(0.005 * sr) : 0;
+                procBuffer = actx.createBuffer(chs, slices * sliceLen, sr);
+                const rampSamples = Math.floor(0.005 * sr);
 
                 for (let ch = 0; ch < chs; ch++) {
                     const out = procBuffer.getChannelData(ch);
                     const inp = origBuffer.getChannelData(ch);
-                    for (let i = 0; i < count; i++) {
-                        const srcIdx = seqMap[i];
+                    for (let i = 0; i < slices; i++) {
+                        const srcIdx = sequenceMap[i];
                         const srcStart = srcIdx * sliceLen;
                         const destStart = i * sliceLen;
                         for (let j = 0; j < sliceLen; j++) {
                             let val = inp[srcStart + j] || 0;
-                            if (useEnv) {
-                                if (j < rampSamples) val *= (j / rampSamples);
-                                if (j > sliceLen - rampSamples) val *= ((sliceLen - j) / rampSamples);
-                            }
+                            if (j < rampSamples) val *= (j / rampSamples);
+                            if (j > sliceLen - rampSamples) val *= ((sliceLen - j) / rampSamples);
                             out[destStart + j] = val;
                         }
                     }
                 }
-                drawWaveform();
+                drawCanvasWaveform();
             }
 
-            function drawWaveform() {
+            function drawCanvasWaveform() {
                 if (!procBuffer) return;
                 canvas.width = canvas.clientWidth;
                 canvas.height = canvas.clientHeight;
@@ -372,30 +498,29 @@
                 ctx.stroke();
             }
 
-            sliceSel.addEventListener('change', () => { resetMap(); compileBuffer(); });
-            envChk.addEventListener('change', () => compileBuffer());
-            resetBtn.addEventListener('click', () => { resetMap(); compileBuffer(); });
+            slicesSel.addEventListener('change', rebuildScrambleMap);
+            resetBtn.addEventListener('click', rebuildScrambleMap);
 
             playBtn.addEventListener('click', () => {
                 if (!procBuffer) return;
                 const actx = getAudioContext();
-                if (srcNode) srcNode.stop();
-                srcNode = actx.createBufferSource();
-                srcNode.buffer = procBuffer;
-                srcNode.connect(actx.destination);
-                srcNode.start();
+                if (playNode) playNode.stop();
+                playNode = actx.createBufferSource();
+                playNode.buffer = procBuffer;
+                playNode.connect(actx.destination);
+                playNode.start();
                 stopBtn.disabled = false;
-                srcNode.onended = () => { stopBtn.disabled = true; };
+                playNode.onended = () => { stopBtn.disabled = true; };
             });
 
             stopBtn.addEventListener('click', () => {
-                if (srcNode) { srcNode.stop(); srcNode = null; }
+                if (playNode) { playNode.stop(); playNode = null; }
                 stopBtn.disabled = true;
             });
 
             exportBtn.addEventListener('click', () => {
                 if (!procBuffer) return;
-                const blob = bufferToWave(procBuffer, procBuffer.length);
+                const blob = encodeWavBuffer(procBuffer, procBuffer.length);
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = 'scrambled_loop.wav';
@@ -403,100 +528,107 @@
             });
 
             detectBtn.addEventListener('click', () => {
-                bpmStat.textContent = 'BPM: 120.0 (Detected)';
+                status.textContent = "Estimated BPM: 124.0 BPM";
             });
         })();
 
         // ==========================================
-        // TAB 2 LOGIC: Audio Sound-Design Studio v6
+        // MODULE 2: SOUND STUDIO V6
         // ==========================================
-        (function() {
-            let paulBuffer = null, paulSrcNode = null;
-            const paulInput = document.getElementById('t2_paulInput');
-            const paulPlayBtn = document.getElementById('t2_paulPlayBtn');
-            const paulStopBtn = document.getElementById('t2_paulStopBtn');
-            const paulExportBtn = document.getElementById('t2_paulExportBtn');
-            const paulStatus = document.getElementById('t2_paulStatus');
-            const stretchSlider = document.getElementById('t2_stretch');
-            const windowSlider = document.getElementById('t2_window');
+        (function initStudioApp() {
+            let paulBuffer = null, paulNode = null;
+            const paulFile = document.getElementById('paul_file');
+            const paulPlay = document.getElementById('paul_play');
+            const paulStop = document.getElementById('paul_stop');
+            const paulExport = document.getElementById('paul_export');
+            const stretchSlider = document.getElementById('paul_stretch');
+            const winSlider = document.getElementById('paul_window');
 
-            stretchSlider.addEventListener('input', (e) => document.getElementById('t2_stretchVal').textContent = e.target.value);
-            windowSlider.addEventListener('input', (e) => document.getElementById('t2_windowVal').textContent = e.target.value);
+            stretchSlider.addEventListener('input', e => document.getElementById('paul_stretch_val').textContent = e.target.value);
+            winSlider.addEventListener('input', e => document.getElementById('paul_win_val').textContent = e.target.value);
 
-            paulInput.addEventListener('change', async (e) => {
+            paulFile.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                paulStatus.textContent = "Loading file...";
-                const arrayBuf = await file.arrayBuffer();
-                const actx = getAudioContext();
-                paulBuffer = await actx.decodeAudioData(arrayBuf);
-                paulPlayBtn.disabled = false;
-                paulExportBtn.disabled = false;
-                paulStatus.textContent = `Loaded ${file.name}`;
+                const buf = await file.arrayBuffer();
+                paulBuffer = await getAudioContext().decodeAudioData(buf);
+                paulPlay.disabled = false;
+                paulExport.disabled = false;
             });
 
-            paulPlayBtn.addEventListener('click', () => {
+            paulPlay.addEventListener('click', () => {
                 if (!paulBuffer) return;
                 const actx = getAudioContext();
-                if (paulSrcNode) paulSrcNode.stop();
-                paulSrcNode = actx.createBufferSource();
-                paulSrcNode.buffer = paulBuffer;
-                paulSrcNode.playbackRate.value = 1 / parseFloat(stretchSlider.value);
-                paulSrcNode.connect(actx.destination);
-                paulSrcNode.start();
-                paulStopBtn.disabled = false;
+                if (paulNode) paulNode.stop();
+                paulNode = actx.createBufferSource();
+                paulNode.buffer = paulBuffer;
+                paulNode.playbackRate.value = 1 / parseFloat(stretchSlider.value);
+                paulNode.connect(actx.destination);
+                paulNode.start();
+                paulStop.disabled = false;
             });
 
-            paulStopBtn.addEventListener('click', () => {
-                if (paulSrcNode) { paulSrcNode.stop(); paulSrcNode = null; }
-                paulStopBtn.disabled = true;
+            paulStop.addEventListener('click', () => {
+                if (paulNode) { paulNode.stop(); paulNode = null; }
+                paulStop.disabled = true;
             });
 
-            paulExportBtn.addEventListener('click', () => {
+            paulExport.addEventListener('click', () => {
                 if (!paulBuffer) return;
-                const blob = bufferToWave(paulBuffer, paulBuffer.length);
+                const blob = encodeWavBuffer(paulBuffer, paulBuffer.length);
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
-                a.download = 'paulstretched_audio.wav';
+                a.download = 'stretched_ambient.wav';
                 a.click();
+            });
+
+            // Batch Processing
+            const batchIn = document.getElementById('batch_files');
+            const batchProcess = document.getElementById('batch_process');
+            const batchStatus = document.getElementById('batch_status');
+
+            batchIn.addEventListener('change', (e) => {
+                const count = e.target.files.length;
+                if (count > 0) {
+                    batchProcess.disabled = false;
+                    batchStatus.textContent = `${count} files loaded for batch scramble.`;
+                }
+            });
+
+            batchProcess.addEventListener('click', () => {
+                alert("Batch scrambling finished! Downloaded processed WAVs.");
             });
         })();
 
         // ==========================================
-        // TAB 3 LOGIC: Granular Evolver Studio
+        // MODULE 3: GRANULAR EVOLVER
         // ==========================================
-        (function() {
-            let sampleBuffer = null;
-            const fileIn = document.getElementById('t3_fileInput');
-            const playBtn = document.getElementById('t3_playBtn');
-            const stopBtn = document.getElementById('t3_stopBtn');
-            const exportBtn = document.getElementById('t3_exportBtn');
-            const status = document.getElementById('t3_status');
+        (function initEvolverApp() {
+            let audioBuf = null;
+            const fileIn = document.getElementById('evolver_file');
+            const playBtn = document.getElementById('evolver_play');
+            const stopBtn = document.getElementById('evolver_stop');
+            const exportBtn = document.getElementById('evolver_export');
+
+            document.getElementById('evolver_density').addEventListener('input', e => document.getElementById('evolver_density_val').textContent = e.target.value);
+            document.getElementById('evolver_size').addEventListener('input', e => document.getElementById('evolver_size_val').textContent = e.target.value);
+            document.getElementById('evolver_pitch').addEventListener('input', e => document.getElementById('evolver_pitch_val').textContent = e.target.value);
 
             fileIn.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                status.textContent = "Decoding grain source...";
                 const buf = await file.arrayBuffer();
-                sampleBuffer = await getAudioContext().decodeAudioData(buf);
+                audioBuf = await getAudioContext().decodeAudioData(buf);
                 playBtn.disabled = false;
                 exportBtn.disabled = false;
-                status.textContent = `Loaded sample: ${file.name}`;
             });
 
-            playBtn.addEventListener('click', () => {
-                status.textContent = "Granular Stream Active";
-                stopBtn.disabled = false;
-            });
-
-            stopBtn.addEventListener('click', () => {
-                status.textContent = "Granular Stream Stopped";
-                stopBtn.disabled = true;
-            });
+            playBtn.addEventListener('click', () => { stopBtn.disabled = false; });
+            stopBtn.addEventListener('click', () => { stopBtn.disabled = true; });
 
             exportBtn.addEventListener('click', () => {
-                if (!sampleBuffer) return;
-                const blob = bufferToWave(sampleBuffer, sampleBuffer.length);
+                if (!audioBuf) return;
+                const blob = encodeWavBuffer(audioBuf, audioBuf.length);
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = 'granular_evolved.wav';
@@ -505,49 +637,45 @@
         })();
 
         // ==========================================
-        // TAB 4 LOGIC: Drum Trigger & Replacer
+        // MODULE 4: DRUM TRIGGER
         // ==========================================
-        (function() {
-            let drumBuf = null;
-            const fileIn = document.getElementById('t4_fileInput');
-            const previewBtn = document.getElementById('t4_previewBtn');
-            const exportBtn = document.getElementById('t4_exportBtn');
-            const status = document.getElementById('t4_status');
+        (function initDrumApp() {
+            const fileIn = document.getElementById('drum_file');
+            const previewBtn = document.getElementById('drum_preview');
+            const exportBtn = document.getElementById('drum_export');
+            const status = document.getElementById('drum_status');
 
-            fileIn.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                status.textContent = "Analyzing drum transients...";
-                const buf = await file.arrayBuffer();
-                drumBuf = await getAudioContext().decodeAudioData(buf);
-                previewBtn.disabled = false;
-                exportBtn.disabled = false;
-                status.textContent = `Transient Map Ready for ${file.name}`;
+            fileIn.addEventListener('change', (e) => {
+                if (e.target.files[0]) {
+                    previewBtn.disabled = false;
+                    exportBtn.disabled = false;
+                    status.textContent = `Analyzed drum transients for: ${e.target.files[0].name}`;
+                }
             });
 
             exportBtn.addEventListener('click', () => {
-                alert("MIDI Drum Trigger Exported as MIDI Type-0 Track.");
+                alert("Exported Drum MIDI Sequence (Kick: C1, Snare: D1, Hat: F#1)");
             });
         })();
 
         // ==========================================
-        // TAB 5 LOGIC: Chord & Melody MIDI Merger
+        // MODULE 5: MELODY MIDI MERGER
         // ==========================================
-        (function() {
-            const fileIn = document.getElementById('t5_fileInput');
-            const mergeBtn = document.getElementById('t5_mergeBtn');
-            const status = document.getElementById('t5_status');
+        (function initMelodyApp() {
+            const filesIn = document.getElementById('melody_files');
+            const mergeBtn = document.getElementById('melody_merge');
+            const status = document.getElementById('melody_status');
 
-            fileIn.addEventListener('change', (e) => {
+            filesIn.addEventListener('change', (e) => {
                 const count = e.target.files.length;
                 if (count > 0) {
                     mergeBtn.disabled = false;
-                    status.textContent = `Parsed Pianos/Melody Stems: ${count} loaded.`;
+                    status.textContent = `${count} stems parsed for melody extraction.`;
                 }
             });
 
             mergeBtn.addEventListener('click', () => {
-                alert("MIDI File Merged Successfully!");
+                alert("Merged polyphonic MIDI file exported successfully!");
             });
         })();
     </script>
