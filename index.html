@@ -17,12 +17,11 @@
             --accent-pink: #ec4899;
         }
 
-        /* Prevent double-tap screen zoom on iPad / Safari */
+        /* Enforce touch action to prevent double-tap zoom on iPad */
         * {
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
-            user-select: none;
             box-sizing: border-box;
         }
 
@@ -36,7 +35,6 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
             padding-bottom: env(safe-area-inset-bottom);
-            -webkit-text-size-adjust: 100%;
         }
 
         .tab-btn.active {
@@ -46,20 +44,14 @@
         }
 
         canvas {
-            touch-action: none; /* Direct 2D canvas gestures without page scroll */
+            touch-action: none; /* Allows direct 2D touch interaction */
         }
 
         ::-webkit-scrollbar { height: 6px; width: 6px; }
         ::-webkit-scrollbar-track { background: #090a0f; }
         ::-webkit-scrollbar-thumb { background: #232736; border-radius: 3px; }
 
-        .slice-cell {
-            transition: all 0.1s ease;
-        }
-        .slice-cell.playing {
-            border-color: #00f2fe !important;
-            background-color: rgba(0, 242, 254, 0.25) !important;
-        }
+        .slice-cell { transition: all 0.1s ease; }
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
@@ -67,176 +59,88 @@
     <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <h1 class="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500">
-                🎛️ AudioDSP Studio Ultimate
+                🎛️ AudioDSP Studio
             </h1>
             <button id="unlock-btn" onclick="unlockAudioEngine()" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full font-semibold transition hover:bg-amber-500/30">
                 Tap to Enable Audio
             </button>
         </div>
-
         <nav class="flex gap-1 overflow-x-auto text-xs font-semibold">
-            <button onclick="switchTab('scramble')" id="tab-scramble" class="tab-btn active px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
-                🔀 Loop Scrambler
-            </button>
-            <button onclick="switchTab('granular')" id="tab-granular" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
-                ✨ iPad Granular Studio
-            </button>
-            <button onclick="switchTab('stretch')" id="tab-stretch" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
-                🌊 Ambient Stretch
-            </button>
-            <button onclick="switchTab('drums')" id="tab-drums" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
-                🥁 Drum Transient MIDI
-            </button>
-            <button onclick="switchTab('pitch')" id="tab-pitch" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">
-                🎼 Melody/Chord MIDI
-            </button>
+            <button onclick="switchTab('scramble')" id="tab-scramble" class="tab-btn active px-3 py-2 rounded-t text-slate-400 hover:text-white transition">🔀 Scrambler</button>
+            <button onclick="switchTab('granular')" id="tab-granular" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">✨ Granular</button>
+            <button onclick="switchTab('stretch')" id="tab-stretch" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">🌊 Stretch</button>
+            <button onclick="switchTab('drums')" id="tab-drums" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">🥁 Drums</button>
+            <button onclick="switchTab('pitch')" id="tab-pitch" class="tab-btn px-3 py-2 rounded-t text-slate-400 hover:text-white transition">🎼 Pitch</button>
         </nav>
     </header>
 
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 space-y-4">
-
-        <section class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex-1 min-w-[260px]">
-                <label class="block text-xs uppercase text-slate-400 font-bold mb-1">1. Load Audio Sample(s)</label>
-                <input type="file" id="globalAudioFile" accept="audio/*,.wav,.mp3,.flac" multiple
-                    class="block w-full text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded p-2 cursor-pointer focus:outline-none">
-            </div>
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-xs uppercase text-slate-400 font-bold mb-1">2. Active Sample Pool</label>
-                <select id="globalTrackSelect" onchange="loadSelectedSample()" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                    <option value="">No sample loaded</option>
-                </select>
-            </div>
-            <div class="flex items-end gap-2">
-                <button id="btn-play" onclick="playActiveBuffer()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2 rounded transition active:scale-95">
-                    ▶ Play
-                </button>
-                <button id="btn-stop" onclick="stopAllAudio()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-4 py-2 rounded transition active:scale-95">
-                    ⏹ Stop
-                </button>
-            </div>
-        </section>
-
-        <section class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
-            <div class="relative">
-                <canvas id="waveformCanvas" class="w-full h-28 bg-slate-950 rounded border border-slate-800/80 cursor-crosshair"></canvas>
-            </div>
-            <div class="flex items-center justify-between text-xs text-slate-400 font-mono">
-                <span id="statusText">System Ready. Load an audio file to begin.</span>
-                <span id="audioStats">0.00s | 44100Hz</span>
-            </div>
+        
+        <section class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <label class="block text-xs uppercase text-slate-400 font-bold mb-2">Global Sample Library (Load files once, use in any module)</label>
+            <input type="file" id="globalAudioFile" accept="audio/*,.wav,.mp3,.flac" multiple class="block w-full text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded p-2 cursor-pointer focus:outline-none">
+            <div id="globalStatusText" class="text-xs text-slate-500 mt-2 font-mono">0 files loaded in memory.</div>
         </section>
 
         <section id="module-scramble" class="tab-module space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-md font-bold text-amber-400 flex items-center gap-2">🔀 Loop Scrambler & Slice Mapping Remixer</h2>
-                    <span id="bpmDisplay" class="text-xs bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-1 rounded font-mono">BPM: --</span>
+                    <h2 class="text-md font-bold text-amber-400">🔀 Loop Scrambler & Slicer</h2>
+                    <select id="srcScramble" class="bg-slate-950 border border-slate-700 text-xs rounded p-1 text-slate-200 min-w-[150px]" onchange="scrambler.loadSrc()"><option value="">Select track...</option></select>
+                </div>
+                
+                <canvas id="scrambleCanvas" class="w-full h-24 bg-slate-950 rounded border border-slate-800 cursor-crosshair"></canvas>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <button onclick="scrambler.detectBPM()" class="bg-slate-800 text-amber-400 text-xs font-bold py-2 rounded border border-amber-500/20">⚡ Detect BPM</button>
+                    <select id="scrambleSlices" onchange="scrambler.resetGrid()" class="bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                        <option value="4">4 Slices</option><option value="8">8 Slices</option><option value="16" selected>16 Slices</option>
+                    </select>
+                    <select id="scrambleEnvelope" class="bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                        <option value="true">Anti-Pop Fade</option><option value="false">Raw Cut</option>
+                    </select>
+                    <button onclick="scrambler.play()" id="scramblePlayBtn" class="bg-emerald-600 text-white font-bold py-2 rounded text-xs">▶ Play Result</button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <button onclick="detectBPM()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold py-2 px-3 rounded border border-amber-500/20 transition">
-                        ⚡ Detect BPM
-                    </button>
-                    <div>
-                        <label class="block text-[10px] text-slate-400 mb-1">Slice Count</label>
-                        <select id="scrambleSlices" onchange="resetSliceGrid()" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                            <option value="4">4 Slices</option>
-                            <option value="8">8 Slices</option>
-                            <option value="16" selected>16 Slices</option>
-                            <option value="32">32 Slices</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-400 mb-1">Envelope Protection</label>
-                        <select id="scrambleEnvelope" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                            <option value="true">5ms Anti-Pop Crossfade</option>
-                            <option value="false">Raw Hard Cut</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="runScramble()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition active:scale-95">
-                            🎲 Scramble Slices
-                        </button>
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="exportScrambleWav()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-2 px-3 rounded text-xs border border-amber-500/30 transition active:scale-95">
-                            💾 Export Scramble WAV
-                        </button>
-                    </div>
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                    <button onclick="scrambler.process()" class="bg-amber-500 text-slate-950 font-bold py-2 rounded text-xs">🎲 Scramble</button>
+                    <button onclick="scrambler.exportWav()" class="bg-slate-800 text-amber-400 font-bold py-2 rounded text-xs border border-amber-500/30">💾 Export WAV</button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 border-t border-slate-800 pt-3">
-                    <div>
-                        <label class="block text-xs text-slate-400">Trim Start: <span id="val-trim-start">0</span>%</label>
-                        <input type="range" id="trimStart" min="0" max="95" value="0" class="w-full accent-amber-400" oninput="drawWaveform(activeAudioBuffer)">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400">Trim End: <span id="val-trim-end">100</span>%</label>
-                        <input type="range" id="trimEnd" min="5" max="100" value="100" class="w-full accent-amber-400" oninput="drawWaveform(activeAudioBuffer)">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs text-slate-400 mb-2">Interactive Slice Mapping Sequence</label>
-                    <div id="sliceGrid" class="grid grid-cols-8 md:grid-cols-16 gap-1 p-2 bg-slate-950 rounded border border-slate-800"></div>
-                </div>
+                <div id="sliceGrid" class="grid grid-cols-8 md:grid-cols-16 gap-1 p-2 bg-slate-950 rounded border border-slate-800 mt-2"></div>
             </div>
         </section>
 
         <section id="module-granular" class="tab-module hidden space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h2 class="text-md font-bold text-sky-400 flex items-center gap-2">✨ Interactive iPad Granular Pad</h2>
-                
+                <div class="flex items-center justify-between">
+                    <h2 class="text-md font-bold text-sky-400">✨ iPad Granular Pad</h2>
+                    <select id="srcGranular" class="bg-slate-950 border border-slate-700 text-xs rounded p-1 text-slate-200 min-w-[150px]" onchange="granular.loadSrc()"><option value="">Select track...</option></select>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs text-slate-400">Grain Size: <span id="val-grain-size">100</span>ms</label>
-                                <input type="range" id="grainSize" min="10" max="500" value="100" class="w-full accent-sky-400">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-400">Density: <span id="val-grain-density">25</span>/s</label>
-                                <input type="range" id="grainDensity" min="1" max="60" value="25" class="w-full accent-sky-400">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-400">Spray / Jitter: <span id="val-grain-spray">20</span>ms</label>
-                                <input type="range" id="grainSpray" min="0" max="200" value="20" class="w-full accent-sky-400">
-                            </div>
-                            <div>
-                                <label class="block text-xs text-slate-400">Pitch Shift: <span id="val-grain-pitch">0</span> st</label>
-                                <input type="range" id="grainPitch" min="-12" max="12" value="0" class="w-full accent-sky-400">
-                            </div>
+                            <div><label class="block text-xs text-slate-400">Grain Size: <span id="val-grain-size">100</span>ms</label><input type="range" id="grainSize" min="10" max="500" value="100" class="w-full accent-sky-400" oninput="updateVal('grainSize')"></div>
+                            <div><label class="block text-xs text-slate-400">Density: <span id="val-grain-density">25</span>/s</label><input type="range" id="grainDensity" min="1" max="60" value="25" class="w-full accent-sky-400" oninput="updateVal('grainDensity')"></div>
+                            <div><label class="block text-xs text-slate-400">Spray: <span id="val-grain-spray">20</span>ms</label><input type="range" id="grainSpray" min="0" max="200" value="20" class="w-full accent-sky-400" oninput="updateVal('grainSpray')"></div>
+                            <div><label class="block text-xs text-slate-400">Pitch: <span id="val-grain-pitch">0</span> st</label><input type="range" id="grainPitch" min="-12" max="12" value="0" class="w-full accent-sky-400" oninput="updateVal('grainPitch')"></div>
                         </div>
 
-                        <div class="border-t border-slate-800 pt-3">
-                            <label class="block text-xs text-slate-400 mb-1 font-semibold">Render Export Duration Choice</label>
-                            <div class="flex gap-2 items-center">
-                                <select id="granularDurationSelect" onchange="toggleGranularCustomDuration()" class="flex-1 bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                                    <option value="3">3 Seconds</option>
-                                    <option value="5" selected>5 Seconds</option>
-                                    <option value="10">10 Seconds</option>
-                                    <option value="30">30 Seconds</option>
-                                    <option value="60">60 Seconds</option>
-                                    <option value="custom">Custom Seconds...</option>
+                        <div class="flex gap-2 items-end pt-2 border-t border-slate-800">
+                            <div class="flex-1">
+                                <label class="block text-[10px] text-slate-400 mb-1">Export Length</label>
+                                <select id="granDur" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                                    <option value="5">5s</option><option value="15">15s</option><option value="30">30s</option>
                                 </select>
-                                <input type="number" id="granularCustomSec" min="1" max="300" value="15" class="hidden w-20 bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
                             </div>
-                        </div>
-
-                        <div class="flex gap-2">
-                            <button id="granularToggleBtn" onclick="toggleGranularEngine()" class="flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition active:scale-95">
-                                Start Granular Stream
-                            </button>
-                            <button onclick="exportGranularWav()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold py-2 px-3 rounded text-xs border border-sky-500/30 transition active:scale-95">
-                                💾 Render Granular WAV
-                            </button>
+                            <button id="granPlayBtn" onclick="granular.toggle()" class="flex-1 bg-sky-500 text-slate-950 font-bold py-2 rounded text-xs">Start Stream</button>
+                            <button onclick="granular.export()" class="flex-1 bg-slate-800 text-sky-400 font-bold py-2 rounded text-xs border border-sky-500/30">💾 Export</button>
                         </div>
                     </div>
-
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">2D Touch Controller (Drag finger/stylus)</label>
-                        <canvas id="granularPad" class="w-full h-44 bg-slate-950 rounded border border-slate-800 cursor-pointer"></canvas>
+                        <label class="block text-[10px] text-slate-400 mb-1">Touch Pad (Drag to scrub)</label>
+                        <canvas id="granularPad" class="w-full h-36 bg-slate-950 rounded border border-slate-800 cursor-crosshair"></canvas>
                     </div>
                 </div>
             </div>
@@ -244,869 +148,493 @@
 
         <section id="module-stretch" class="tab-module hidden space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h2 class="text-md font-bold text-purple-400 flex items-center gap-2">🌊 Paulstretch Spectral Dissolver Engine</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-xs text-slate-400">Stretch Ratio: <span id="val-stretch-ratio">8</span>x</label>
-                        <input type="range" id="stretchRatio" min="2" max="100" value="8" class="w-full accent-purple-400">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400">Grain Window: <span id="val-stretch-window">200</span>ms</label>
-                        <input type="range" id="stretchWindow" min="50" max="600" value="200" class="w-full accent-purple-400">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400">Phase Blur: <span id="val-stretch-diffuse">80</span>%</label>
-                        <input type="range" id="stretchDiffuse" min="0" max="100" value="80" class="w-full accent-purple-400">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400">Pitch Transpose: <span id="val-stretch-pitch">0</span> st</label>
-                        <input type="range" id="stretchPitch" min="-12" max="12" value="0" class="w-full accent-purple-400">
-                    </div>
+                <div class="flex items-center justify-between">
+                    <h2 class="text-md font-bold text-purple-400">🌊 Ambient Stretch (Paulstretch)</h2>
+                    <select id="srcStretch" class="bg-slate-950 border border-slate-700 text-xs rounded p-1 text-slate-200 min-w-[150px]"><option value="">Select track...</option></select>
                 </div>
 
-                <div class="border-t border-slate-800 pt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1 font-semibold">Render Export Duration Choice</label>
-                        <div class="flex gap-2 items-center">
-                            <select id="stretchDurationSelect" onchange="toggleStretchCustomDuration()" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                                <option value="full" selected>Full Stretched Length (Native)</option>
-                                <option value="10">10 Seconds Preview</option>
-                                <option value="30">30 Seconds Preview</option>
-                                <option value="60">60 Seconds Ambient</option>
-                                <option value="120">120 Seconds (2 Mins)</option>
-                                <option value="custom">Custom Seconds...</option>
-                            </select>
-                            <input type="number" id="stretchCustomSec" min="1" max="600" value="45" class="hidden w-24 bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                        </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div><label class="block text-xs text-slate-400">Stretch: <span id="val-stretch-ratio">8</span>x</label><input type="range" id="stretchRatio" min="2" max="100" value="8" class="w-full accent-purple-400" oninput="updateVal('stretchRatio')"></div>
+                    <div><label class="block text-xs text-slate-400">Window: <span id="val-stretch-window">200</span>ms</label><input type="range" id="stretchWindow" min="50" max="600" value="200" class="w-full accent-purple-400" oninput="updateVal('stretchWindow')"></div>
+                    <div><label class="block text-xs text-slate-400">Phase Blur: <span id="val-stretch-blur">80</span>%</label><input type="range" id="stretchBlur" min="0" max="100" value="80" class="w-full accent-purple-400" oninput="updateVal('stretchBlur')"></div>
+                    <div><label class="block text-xs text-slate-400">Pitch: <span id="val-stretch-pitch">0</span> st</label><input type="range" id="stretchPitch" min="-12" max="12" value="0" class="w-full accent-purple-400" oninput="updateVal('stretchPitch')"></div>
+                </div>
+
+                <div class="flex gap-2 items-end pt-2 border-t border-slate-800">
+                    <div class="flex-1">
+                        <label class="block text-[10px] text-slate-400 mb-1">Export Length</label>
+                        <select id="stretchDur" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
+                            <option value="full">Full Duration</option><option value="15">15 Seconds</option><option value="60">60 Seconds</option>
+                        </select>
                     </div>
-                    <div class="flex items-end">
-                        <button onclick="processStretch()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-3 rounded text-xs transition active:scale-95">
-                            Process & Export Spectral Stretch WAV
-                        </button>
-                    </div>
+                    <button id="stretchPlayBtn" onclick="stretch.preview()" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded text-xs">▶ Preview (10s)</button>
+                    <button onclick="stretch.export()" class="flex-1 bg-purple-600 text-white font-bold py-2 rounded text-xs">💾 Export WAV</button>
                 </div>
             </div>
         </section>
 
         <section id="module-drums" class="tab-module hidden space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h2 class="text-md font-bold text-emerald-400 flex items-center gap-2">🥁 Drum Transient Detection & MIDI Converter</h2>
-                
+                <div class="flex items-center justify-between">
+                    <h2 class="text-md font-bold text-emerald-400">🥁 Drum Transient to MIDI</h2>
+                    <select id="srcDrums" class="bg-slate-950 border border-slate-700 text-xs rounded p-1 text-slate-200 min-w-[150px]" onchange="drums.analyze()"><option value="">Select track...</option></select>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Sensitivity Threshold</label>
-                        <input type="range" id="drumThreshold" min="5" max="95" value="30" class="w-full accent-emerald-400">
+                        <label class="block text-xs text-slate-400 mb-1">Threshold: <span id="val-drum-thresh">30</span>%</label>
+                        <input type="range" id="drumThresh" min="5" max="95" value="30" class="w-full accent-emerald-400" oninput="updateVal('drumThresh'); drums.debouncedAnalyze()">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Target Detection Filter</label>
-                        <select id="drumTarget" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                            <option value="kick">Kick Drum (Low-Pass Filter)</option>
-                            <option value="snare">Snare Drum (Band-Pass Filter)</option>
-                            <option value="hihat">Hi-Hat (High-Pass Filter)</option>
-                            <option value="full">Full Percussion Transient</option>
+                        <label class="block text-[10px] text-slate-400 mb-1">Target Instrument</label>
+                        <select id="drumTarget" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200" onchange="drums.analyze()">
+                            <option value="kick">Kick (Low-Pass)</option><option value="snare">Snare (Band-Pass)</option><option value="hat">Hi-Hat (High-Pass)</option>
                         </select>
                     </div>
                     <div class="flex items-end">
-                        <button onclick="previewDrumSynth()" class="w-full bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold py-2 px-3 rounded text-xs border border-emerald-500/30 transition">
-                            🔊 Preview Drum Synth Trigger
-                        </button>
+                        <button id="drumPlayBtn" onclick="drums.preview()" class="w-full bg-slate-800 text-emerald-400 font-bold py-2 rounded text-xs border border-emerald-500/30">🔊 Preview Hits</button>
                     </div>
                     <div class="flex items-end">
-                        <button onclick="extractDrumMIDI()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition active:scale-95">
-                            💾 Export Drum MIDI (.mid)
-                        </button>
+                        <button onclick="drums.exportMidi()" class="w-full bg-emerald-500 text-slate-950 font-bold py-2 rounded text-xs">💾 Export .MID</button>
                     </div>
                 </div>
+                <div id="drumLog" class="text-xs text-slate-400 font-mono mt-2">Hits detected: 0</div>
             </div>
         </section>
 
         <section id="module-pitch" class="tab-module hidden space-y-4">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h2 class="text-md font-bold text-indigo-400 flex items-center gap-2">🎼 Audio Pitch Detection & Multi-Track MIDI Merger</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-md font-bold text-indigo-400">🎼 Pitch & Melody to MIDI</h2>
+                    <select id="srcPitch" class="bg-slate-950 border border-slate-700 text-xs rounded p-1 text-slate-200 min-w-[150px]" onchange="pitch.analyze()"><option value="">Select track...</option></select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Analysis Preset</label>
-                        <select id="pitchPreset" onchange="applyPitchPreset()" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200">
-                            <option value="vocal">Vocal / Lead Melody (YIN Monophonic)</option>
-                            <option value="piano">Piano / Polyphonic Chords</option>
-                            <option value="guitar">Guitar Riff</option>
-                            <option value="bass">Bassline Detection</option>
+                        <label class="block text-[10px] text-slate-400 mb-1">Analysis Mode</label>
+                        <select id="pitchMode" class="w-full bg-slate-950 border border-slate-800 text-xs rounded p-2 text-slate-200" onchange="pitch.analyze()">
+                            <option value="melody">Monophonic Melody (YIN)</option><option value="chord">Polyphonic Chords (Chroma)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Min Confidence</label>
-                        <input type="range" id="pitchConfidence" min="40" max="95" value="70" class="w-full accent-indigo-400">
+                        <label class="block text-xs text-slate-400 mb-1">Confidence: <span id="val-pitch-conf">60</span>%</label>
+                        <input type="range" id="pitchConf" min="30" max="95" value="60" class="w-full accent-indigo-400" oninput="updateVal('pitchConf'); pitch.debouncedAnalyze()">
                     </div>
                     <div class="flex items-end">
-                        <button onclick="extractPitchMIDI()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-3 rounded text-xs transition active:scale-95">
-                            💾 Export Single MIDI (.mid)
-                        </button>
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="mergeAllPoolMIDI()" class="w-full bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold py-2 px-3 rounded text-xs border border-indigo-500/30 transition active:scale-95">
-                            🎹 Merge Pool to Multi-Track MIDI
-                        </button>
+                        <button onclick="pitch.exportMidi()" class="w-full bg-indigo-600 text-white font-bold py-2 rounded text-xs">💾 Export .MID</button>
                     </div>
                 </div>
-
-                <div class="bg-slate-950 border border-slate-800 rounded p-3 h-32 overflow-y-auto font-mono text-xs text-slate-400" id="noteLog">
-                    Note Event Logger Ready...
-                </div>
+                <div id="pitchLog" class="bg-slate-950 border border-slate-800 rounded p-2 h-32 overflow-y-auto font-mono text-[10px] text-slate-400">Ready for analysis...</div>
             </div>
         </section>
 
     </main>
 
     <script>
-        // Prevent Safari double-tap zoom via touch delta
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function (e) {
-            const now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
-                e.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, { passive: false });
-
-        // Core Web Audio State
+        // --- GLOBAL SETUP ---
         let audioCtx = null;
-        let activeAudioBuffer = null;
-        let activeSourceNode = null;
         const soundPool = new Map();
-
-        // Canvas Elements
-        const waveformCanvas = document.getElementById('waveformCanvas');
-        const canvasCtx = waveformCanvas.getContext('2d');
-        const granularPad = document.getElementById('granularPad');
-        const padCtx = granularPad.getContext('2d');
-        const statusText = document.getElementById('statusText');
-
-        // Engine Parameters
-        let isGranularActive = false;
-        let granularInterval = null;
-        let scrubPosition = 0.5;
-        let sliceSequence = [];
-
-        function setStatus(msg) {
-            statusText.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-        }
-
+        
         function unlockAudioEngine() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            const btn = document.getElementById('unlock-btn');
-            btn.textContent = 'Engine Active';
-            btn.className = 'text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-semibold';
-            setStatus('Web Audio Context unlocked.');
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('unlock-btn').textContent = 'Engine Active';
+            document.getElementById('unlock-btn').classList.replace('bg-amber-500/20', 'bg-emerald-500/20');
+            document.getElementById('unlock-btn').classList.replace('text-amber-300', 'text-emerald-300');
         }
 
         window.addEventListener('touchstart', unlockAudioEngine, { once: true });
         window.addEventListener('pointerdown', unlockAudioEngine, { once: true });
 
-        // Tab Navigation
         function switchTab(tabId) {
             document.querySelectorAll('.tab-module').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
             document.getElementById(`module-${tabId}`).classList.remove('hidden');
             document.getElementById(`tab-${tabId}`).classList.add('active');
-            if (tabId === 'granular') drawGranularPad();
+            if (tabId === 'granular') granular.drawPad();
         }
 
-        // File Management
+        function updateVal(id) {
+            const el = document.getElementById(id);
+            const valEl = document.getElementById(`val-${id.replace(/([A-Z])/g, "-$1").toLowerCase()}`);
+            if (el && valEl) valEl.textContent = el.value;
+        }
+
+        // Handle Global File Upload
         document.getElementById('globalAudioFile').addEventListener('change', async (e) => {
             unlockAudioEngine();
             const files = e.target.files;
             if (!files.length) return;
-
-            const selectEl = document.getElementById('globalTrackSelect');
-            selectEl.innerHTML = '';
-
             for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                setStatus(`Decoding ${file.name}...`);
+                const f = files[i];
                 try {
-                    const arrayBuf = await file.arrayBuffer();
-                    const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
-                    soundPool.set(file.name, audioBuf);
+                    const arrayBuf = await f.arrayBuffer();
+                    const buf = await audioCtx.decodeAudioData(arrayBuf);
+                    soundPool.set(f.name, buf);
+                } catch(err) { console.error(err); }
+            }
+            updateAllDropdowns();
+            document.getElementById('globalStatusText').textContent = `${soundPool.size} files loaded in memory.`;
+        });
 
+        function updateAllDropdowns() {
+            const selects = ['srcScramble', 'srcGranular', 'srcStretch', 'srcDrums', 'srcPitch'];
+            selects.forEach(id => {
+                const sel = document.getElementById(id);
+                const current = sel.value;
+                sel.innerHTML = '<option value="">Select track...</option>';
+                soundPool.forEach((buf, name) => {
                     const opt = document.createElement('option');
-                    opt.value = file.name;
-                    opt.textContent = `${file.name} (${audioBuf.duration.toFixed(2)}s)`;
-                    selectEl.appendChild(opt);
-
-                    if (i === 0) {
-                        activeAudioBuffer = audioBuf;
-                        resetSliceGrid();
-                        drawWaveform(audioBuf);
-                        updateStats(audioBuf);
-                    }
-                } catch (err) {
-                    setStatus(`Error decoding ${file.name}: ${err.message}`);
-                }
-            }
-            setStatus(`Loaded ${files.length} audio file(s) into memory pool.`);
-        });
-
-        function loadSelectedSample() {
-            const name = document.getElementById('globalTrackSelect').value;
-            if (soundPool.has(name)) {
-                activeAudioBuffer = soundPool.get(name);
-                resetSliceGrid();
-                drawWaveform(activeAudioBuffer);
-                updateStats(activeAudioBuffer);
-                setStatus(`Selected sample: ${name}`);
-            }
-        }
-
-        function updateStats(buf) {
-            document.getElementById('audioStats').textContent = `${buf.duration.toFixed(2)}s | ${buf.sampleRate}Hz | ${buf.numberOfChannels}Ch`;
-        }
-
-        // Waveform Visualizer & Trim Handles Render
-        function drawWaveform(buffer) {
-            const width = waveformCanvas.width = waveformCanvas.parentElement.clientWidth;
-            const height = waveformCanvas.height = waveformCanvas.parentElement.clientHeight;
-
-            canvasCtx.fillStyle = '#090a0f';
-            canvasCtx.fillRect(0, 0, width, height);
-
-            if (!buffer) return;
-
-            const tStart = parseFloat(document.getElementById('trimStart').value) / 100;
-            const tEnd = parseFloat(document.getElementById('trimEnd').value) / 100;
-
-            const data = buffer.getChannelData(0);
-            const step = Math.ceil(data.length / width);
-            const amp = height / 2;
-
-            canvasCtx.beginPath();
-            canvasCtx.strokeStyle = '#00f2fe';
-            canvasCtx.lineWidth = 1.2;
-
-            for (let i = 0; i < width; i++) {
-                let min = 1.0, max = -1.0;
-                for (let j = 0; j < step; j++) {
-                    const datum = data[(i * step) + j];
-                    if (datum < min) min = datum;
-                    if (datum > max) max = datum;
-                }
-                canvasCtx.moveTo(i, (1 + min) * amp);
-                canvasCtx.lineTo(i, (1 + max) * amp);
-            }
-            canvasCtx.stroke();
-
-            // Render Trim Markers
-            canvasCtx.fillStyle = 'rgba(245, 158, 11, 0.25)';
-            canvasCtx.fillRect(0, 0, tStart * width, height);
-            canvasCtx.fillRect(tEnd * width, 0, (1 - tEnd) * width, height);
-        }
-
-        // Dynamic Transport Playback
-        function playActiveBuffer() {
-            unlockAudioEngine();
-            if (!activeAudioBuffer) return setStatus('No audio loaded to play!');
-            stopAllAudio();
-
-            activeSourceNode = audioCtx.createBufferSource();
-            activeSourceNode.buffer = activeAudioBuffer;
-            activeSourceNode.connect(audioCtx.destination);
-            activeSourceNode.start(0);
-            setStatus('Playing active sample buffer...');
-        }
-
-        function stopAllAudio() {
-            if (activeSourceNode) {
-                try { activeSourceNode.stop(); } catch(e){}
-                activeSourceNode = null;
-            }
-            if (isGranularActive) toggleGranularEngine();
-            setStatus('Audio stopped.');
-        }
-
-        // Dynamic Sliders Label Updating
-        ['grainSize', 'grainDensity', 'grainSpray', 'grainPitch', 'stretchRatio', 'stretchWindow', 'stretchDiffuse', 'stretchPitch', 'trimStart', 'trimEnd'].forEach(id => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.addEventListener('input', (e) => {
-                    const target = document.getElementById(`val-${id.replace(/([A-Z])/g, "-$1").toLowerCase()}`);
-                    if (target) target.textContent = e.target.value;
+                    opt.value = name; opt.textContent = name;
+                    sel.appendChild(opt);
                 });
-            }
-        });
-
-        // Toggle Custom Export Duration Inputs
-        function toggleGranularCustomDuration() {
-            const val = document.getElementById('granularDurationSelect').value;
-            const customInput = document.getElementById('granularCustomSec');
-            if (val === 'custom') customInput.classList.remove('hidden');
-            else customInput.classList.add('hidden');
-        }
-
-        function toggleStretchCustomDuration() {
-            const val = document.getElementById('stretchDurationSelect').value;
-            const customInput = document.getElementById('stretchCustomSec');
-            if (val === 'custom') customInput.classList.remove('hidden');
-            else customInput.classList.add('hidden');
-        }
-
-        // ==========================================
-        // MODULE 1: LOOP SCRAMBLER & SLICER
-        // ==========================================
-        function resetSliceGrid() {
-            const count = parseInt(document.getElementById('scrambleSlices').value, 10);
-            const grid = document.getElementById('sliceGrid');
-            grid.innerHTML = '';
-            sliceSequence = Array.from({length: count}, (_, i) => i);
-
-            sliceSequence.forEach((sliceIdx, i) => {
-                const cell = document.createElement('div');
-                cell.className = 'slice-cell bg-slate-900 border border-slate-700 text-center py-2 text-[10px] font-mono text-amber-300 rounded cursor-pointer hover:border-amber-400';
-                cell.textContent = `${i + 1}:${sliceIdx + 1}`;
-                cell.onclick = () => {
-                    // Manual shift slice index on click
-                    sliceSequence[i] = (sliceSequence[i] + 1) % count;
-                    cell.textContent = `${i + 1}:${sliceSequence[i] + 1}`;
-                };
-                grid.appendChild(cell);
+                if (soundPool.has(current)) sel.value = current;
             });
         }
 
-        function detectBPM() {
-            if (!activeAudioBuffer) return setStatus('Load an audio sample first!');
-            const data = activeAudioBuffer.getChannelData(0);
-            const sr = activeAudioBuffer.sampleRate;
-
-            let peaks = 0;
-            const step = Math.floor(sr * 0.05);
-            for (let i = 0; i < data.length - step; i += step) {
-                let energy = 0;
-                for (let j = 0; j < step; j++) energy += Math.abs(data[i + j]);
-                if ((energy / step) > 0.25) peaks++;
-            }
-
-            const estimatedBPM = Math.round((peaks / activeAudioBuffer.duration) * 15);
-            const clampedBPM = Math.max(70, Math.min(180, estimatedBPM));
-            document.getElementById('bpmDisplay').textContent = `BPM: ${clampedBPM}`;
-            setStatus(`Detected loop tempo: ~${clampedBPM} BPM`);
-        }
-
-        function runScramble() {
-            if (!activeAudioBuffer) return setStatus('Load an audio sample first!');
-
-            const sliceCount = parseInt(document.getElementById('scrambleSlices').value, 10);
-            const useEnv = document.getElementById('scrambleEnvelope').value === 'true';
-            const tStart = parseFloat(document.getElementById('trimStart').value) / 100;
-            const tEnd = parseFloat(document.getElementById('trimEnd').value) / 100;
-
-            const chans = activeAudioBuffer.numberOfChannels;
-            const startFrame = Math.floor(activeAudioBuffer.length * tStart);
-            const endFrame = Math.floor(activeAudioBuffer.length * tEnd);
-            const trimLength = endFrame - startFrame;
-            const sliceSamples = Math.floor(trimLength / sliceCount);
-
-            const scrambled = audioCtx.createBuffer(chans, trimLength, activeAudioBuffer.sampleRate);
-
-            // Generate scrambled array sequence
-            for (let i = sliceSequence.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [sliceSequence[i], sliceSequence[j]] = [sliceSequence[j], sliceSequence[i]];
-            }
-            resetSliceGrid();
-
-            for (let c = 0; c < chans; c++) {
-                const inData = activeAudioBuffer.getChannelData(c);
-                const outData = scrambled.getChannelData(c);
-
-                for (let i = 0; i < sliceCount; i++) {
-                    const srcOffset = startFrame + (sliceSequence[i] * sliceSamples);
-                    const destOffset = i * sliceSamples;
-
-                    for (let s = 0; s < sliceSamples; s++) {
-                        let val = inData[srcOffset + s] || 0;
-                        if (useEnv) {
-                            if (s < 64) val *= (s / 64);
-                            else if (s > sliceSamples - 64) val *= ((sliceSamples - s) / 64);
-                        }
-                        outData[destOffset + s] = val;
-                    }
-                }
-            }
-
-            activeAudioBuffer = scrambled;
-            drawWaveform(scrambled);
-            playActiveBuffer();
-            setStatus(`Scrambled into ${sliceCount} slices with crossfade protection.`);
-        }
-
-        function exportScrambleWav() {
-            if (!activeAudioBuffer) return setStatus('No audio to export!');
-            const wavBlob = bufferToWave(activeAudioBuffer, activeAudioBuffer.length);
-            downloadBlob(wavBlob, 'scramble-remix.wav');
-            setStatus('Scrambled WAV exported.');
-        }
-
-        // ==========================================
-        // MODULE 2: IPAD GRANULAR STUDIO
-        // ==========================================
-        function drawGranularPad() {
-            const w = granularPad.width = granularPad.parentElement.clientWidth;
-            const h = granularPad.height = granularPad.parentElement.clientHeight;
-
-            padCtx.fillStyle = '#090a0f';
-            padCtx.fillRect(0, 0, w, h);
-
-            padCtx.strokeStyle = '#00f2fe';
-            padCtx.lineWidth = 1;
-            padCtx.beginPath();
-            padCtx.moveTo(scrubPosition * w, 0);
-            padCtx.lineTo(scrubPosition * w, h);
-            padCtx.stroke();
-        }
-
-        granularPad.addEventListener('pointermove', (e) => {
-            if (e.buttons === 1 || e.pointerType === 'touch') {
-                const rect = granularPad.getBoundingClientRect();
-                scrubPosition = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                drawGranularPad();
-            }
-        });
-
-        function toggleGranularEngine() {
-            unlockAudioEngine();
-            if (!activeAudioBuffer) return setStatus('Load an audio sample first!');
-
-            const btn = document.getElementById('granularToggleBtn');
-            if (isGranularActive) {
-                clearInterval(granularInterval);
-                isGranularActive = false;
-                btn.textContent = 'Start Granular Stream';
-                btn.className = 'flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded text-xs transition active:scale-95';
-                setStatus('Granular stream stopped.');
-            } else {
-                isGranularActive = true;
-                btn.textContent = 'Stop Granular Stream';
-                btn.className = 'flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-3 rounded text-xs transition active:scale-95';
-
-                const density = parseInt(document.getElementById('grainDensity').value, 10);
-                granularInterval = setInterval(triggerGrain, Math.max(10, 1000 / density));
-                setStatus('Granular stream active.');
-            }
-        }
-
-        function triggerGrain() {
-            if (!isGranularActive || !activeAudioBuffer) return;
-
-            const grainSizeMs = parseFloat(document.getElementById('grainSize').value);
-            const sprayMs = parseFloat(document.getElementById('grainSpray').value);
-            const pitchShift = parseFloat(document.getElementById('grainPitch').value);
-
-            const duration = grainSizeMs / 1000;
-            const bufDuration = activeAudioBuffer.duration;
-
-            let startPos = Math.max(0, Math.min(bufDuration - duration, (scrubPosition * bufDuration) + (((Math.random() * 2) - 1) * (sprayMs / 1000))));
-
-            const src = audioCtx.createBufferSource();
-            src.buffer = activeAudioBuffer;
-            src.playbackRate.value = Math.pow(2, pitchShift / 12);
-
-            const env = audioCtx.createGain();
-            const now = audioCtx.currentTime;
-
-            env.gain.setValueAtTime(0.001, now);
-            env.gain.linearRampToValueAtTime(0.3, now + (duration * 0.5));
-            env.gain.linearRampToValueAtTime(0.001, now + duration);
-
-            src.connect(env);
-            env.connect(audioCtx.destination);
-            src.start(now, startPos, duration);
-        }
-
-        async function exportGranularWav() {
-            if (!activeAudioBuffer) return setStatus('Load audio buffer first!');
-
-            // Calculate Export Duration Choice
-            let renderSec = 5;
-            const durChoice = document.getElementById('granularDurationSelect').value;
-            if (durChoice === 'custom') {
-                renderSec = parseFloat(document.getElementById('granularCustomSec').value) || 5;
-            } else {
-                renderSec = parseFloat(durChoice);
-            }
-
-            setStatus(`Rendering ${renderSec}s granular audio to WAV...`);
-
-            const offlineCtx = new OfflineAudioContext(
-                activeAudioBuffer.numberOfChannels,
-                activeAudioBuffer.sampleRate * renderSec,
-                activeAudioBuffer.sampleRate
-            );
-
-            const grainSizeMs = parseFloat(document.getElementById('grainSize').value);
-            const density = parseInt(document.getElementById('grainDensity').value, 10);
-            const pitchShift = parseFloat(document.getElementById('grainPitch').value);
-            const grainDuration = grainSizeMs / 1000;
-
-            for (let t = 0; t < renderSec; t += (1 / density)) {
-                const src = offlineCtx.createBufferSource();
-                src.buffer = activeAudioBuffer;
-                src.playbackRate.value = Math.pow(2, pitchShift / 12);
-
-                const env = offlineCtx.createGain();
-                env.gain.setValueAtTime(0.001, t);
-                env.gain.linearRampToValueAtTime(0.25, t + (grainDuration * 0.5));
-                env.gain.linearRampToValueAtTime(0.001, t + grainDuration);
-
-                src.connect(env);
-                env.connect(offlineCtx.destination);
-                src.start(t, activeAudioBuffer.duration * scrubPosition, grainDuration);
-            }
-
-            const rendered = await offlineCtx.startRendering();
-            const wavBlob = bufferToWave(rendered, rendered.length);
-            downloadBlob(wavBlob, `granular-${renderSec}s-render.wav`);
-            setStatus(`Exported ${renderSec}s Granular WAV file.`);
-        }
-
-        // ==========================================
-        // MODULE 3: AMBIENT SPECTRAL STRETCH
-        // ==========================================
-        async function processStretch() {
-            if (!activeAudioBuffer) return setStatus('Load audio sample first!');
-
-            const stretchRatio = parseFloat(document.getElementById('stretchRatio').value);
-            const windowSizeMs = parseFloat(document.getElementById('stretchWindow').value);
-            const pitchShift = parseFloat(document.getElementById('stretchPitch').value);
-
-            const nativeLengthSec = activeAudioBuffer.duration * stretchRatio;
-
-            // Calculate Export Duration Choice
-            let renderSec = nativeLengthSec;
-            const durChoice = document.getElementById('stretchDurationSelect').value;
-            if (durChoice === 'custom') {
-                renderSec = parseFloat(document.getElementById('stretchCustomSec').value) || 30;
-            } else if (durChoice !== 'full') {
-                renderSec = parseFloat(durChoice);
-            }
-
-            setStatus(`Processing spectral stretch (${stretchRatio}x). Total duration: ${renderSec.toFixed(1)}s...`);
-
-            const totalSamples = Math.floor(activeAudioBuffer.sampleRate * renderSec);
-            const offlineCtx = new OfflineAudioContext(
-                activeAudioBuffer.numberOfChannels,
-                totalSamples,
-                activeAudioBuffer.sampleRate
-            );
-
-            const windowSize = windowSizeMs / 1000;
-            const hopInput = windowSize / 4;
-            const hopOutput = hopInput * stretchRatio;
-
-            for (let tIn = 0, tOut = 0; tOut < renderSec && tIn < activeAudioBuffer.duration - windowSize; tIn += hopInput, tOut += hopOutput) {
-                const src = offlineCtx.createBufferSource();
-                src.buffer = activeAudioBuffer;
-                src.playbackRate.value = Math.pow(2, pitchShift / 12);
-
-                const env = offlineCtx.createGain();
-                env.gain.setValueAtTime(0.001, tOut);
-                env.gain.linearRampToValueAtTime(0.12, tOut + (windowSize * 0.5));
-                env.gain.linearRampToValueAtTime(0.001, tOut + windowSize);
-
-                src.connect(env);
-                env.connect(offlineCtx.destination);
-                src.start(tOut, tIn, windowSize);
-            }
-
-            const stretched = await offlineCtx.startRendering();
-            activeAudioBuffer = stretched;
-            drawWaveform(stretched);
-            playActiveBuffer();
-
-            const wavBlob = bufferToWave(stretched, stretched.length);
-            downloadBlob(wavBlob, `paulstretch-${stretchRatio}x-${Math.round(renderSec)}s.wav`);
-            setStatus(`Spectral ambient stretch completed (${renderSec.toFixed(1)}s output).`);
-        }
-
-        // ==========================================
-        // MODULE 4: DRUM TRANSIENT TO MIDI
-        // ==========================================
-        function previewDrumSynth() {
-            unlockAudioEngine();
-            const target = document.getElementById('drumTarget').value;
-            const now = audioCtx.currentTime;
-
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-
-            if (target === 'kick') {
-                osc.frequency.setValueAtTime(120, now);
-                osc.frequency.exponentialRampToValueAtTime(30, now + 0.15);
-                gain.gain.setValueAtTime(1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(now);
-                osc.stop(now + 0.15);
-            } else {
-                const bufferSize = audioCtx.sampleRate * 0.1;
-                const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const output = noiseBuf.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
-
-                const whiteNoise = audioCtx.createBufferSource();
-                whiteNoise.buffer = noiseBuf;
-
-                gain.gain.setValueAtTime(0.8, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-
-                whiteNoise.connect(gain);
-                gain.connect(audioCtx.destination);
-                whiteNoise.start(now);
-            }
-            setStatus('Triggered drum synth preview.');
-        }
-
-        function extractDrumMIDI() {
-            if (!activeAudioBuffer) return setStatus('Load audio file first!');
-
-            const thresholdVal = parseFloat(document.getElementById('drumThreshold').value) / 100;
-            const channelData = activeAudioBuffer.getChannelData(0);
-            const sampleRate = activeAudioBuffer.sampleRate;
-            const windowSize = Math.floor(sampleRate * 0.02);
-
-            const midiEvents = [];
-            let lastOnsetSample = -windowSize * 2;
-
-            for (let i = 0; i < channelData.length - windowSize; i += windowSize) {
-                let rms = 0;
-                for (let j = 0; j < windowSize; j++) rms += channelData[i + j] * channelData[i + j];
-                rms = Math.sqrt(rms / windowSize);
-
-                if (rms > thresholdVal && (i - lastOnsetSample) > (sampleRate * 0.1)) {
-                    midiEvents.push({
-                        time: i / sampleRate,
-                        note: 36, // General MIDI Kick Note
-                        velocity: Math.min(127, Math.floor(rms * 127 * 2))
-                    });
-                    lastOnsetSample = i;
-                }
-            }
-
-            if (!midiEvents.length) return setStatus('No transients detected. Lower sensitivity threshold.');
-
-            const midiBlob = generateMidiFile(midiEvents);
-            downloadBlob(midiBlob, 'drum-transients.mid');
-            setStatus(`Extracted ${midiEvents.length} drum hits to MIDI!`);
-        }
-
-        // ==========================================
-        // MODULE 5: MELODY & CHORD TO MIDI MERGER
-        // ==========================================
-        function applyPitchPreset() {
-            const preset = document.getElementById('pitchPreset').value;
-            const conf = document.getElementById('pitchConfidence');
-            if (preset === 'vocal') conf.value = 75;
-            if (preset === 'piano') conf.value = 60;
-            if (preset === 'guitar') conf.value = 70;
-            if (preset === 'bass') conf.value = 80;
-            setStatus(`Applied ${preset} pitch preset settings.`);
-        }
-
-        function extractPitchMIDI() {
-            if (!activeAudioBuffer) return setStatus('Load audio file first!');
-
-            const channelData = activeAudioBuffer.getChannelData(0);
-            const sampleRate = activeAudioBuffer.sampleRate;
-            const windowSize = 2048;
-            const hopSize = 512;
-
-            const midiEvents = [];
-            const noteLog = document.getElementById('noteLog');
-            noteLog.innerHTML = '';
-
-            let lastPitch = -1;
-
-            for (let i = 0; i < channelData.length - windowSize; i += hopSize) {
-                const pitch = autoCorrelate(channelData.slice(i, i + windowSize), sampleRate);
-
-                if (pitch !== -1) {
-                    const midiNote = Math.round(69 + 12 * Math.log2(pitch / 440));
-                    if (midiNote !== lastPitch && midiNote >= 21 && midiNote <= 108) {
-                        const time = i / sampleRate;
-                        midiEvents.push({ time, note: midiNote, velocity: 90 });
-                        
-                        const logItem = document.createElement('div');
-                        logItem.textContent = `[${time.toFixed(2)}s] Frequency: ${pitch.toFixed(1)}Hz | Note: MIDI ${midiNote}`;
-                        noteLog.appendChild(logItem);
-
-                        lastPitch = midiNote;
-                    }
-                }
-            }
-
-            if (!midiEvents.length) return setStatus('Could not detect pitch in audio signal.');
-
-            const midiBlob = generateMidiFile(midiEvents);
-            downloadBlob(midiBlob, 'melody-pitch.mid');
-            setStatus(`Extracted ${midiEvents.length} melodic notes to MIDI.`);
-        }
-
-        function mergeAllPoolMIDI() {
-            if (soundPool.size === 0) return setStatus('No sample pool available to merge!');
-
-            const mergedEvents = [];
-            let timeOffset = 0;
-
-            soundPool.forEach((buf, name) => {
-                const channelData = buf.getChannelData(0);
-                const sampleRate = buf.sampleRate;
-                const windowSize = 2048;
-                const hopSize = 512;
-                let lastPitch = -1;
-
-                for (let i = 0; i < channelData.length - windowSize; i += hopSize) {
-                    const pitch = autoCorrelate(channelData.slice(i, i + windowSize), sampleRate);
-                    if (pitch !== -1) {
-                        const midiNote = Math.round(69 + 12 * Math.log2(pitch / 440));
-                        if (midiNote !== lastPitch && midiNote >= 21 && midiNote <= 108) {
-                            mergedEvents.push({
-                                time: timeOffset + (i / sampleRate),
-                                note: midiNote,
-                                velocity: 90
-                            });
-                            lastPitch = midiNote;
-                        }
-                    }
-                }
-                timeOffset += buf.duration;
-            });
-
-            const midiBlob = generateMidiFile(mergedEvents);
-            downloadBlob(midiBlob, 'merged-sample-pool.mid');
-            setStatus(`Merged ${soundPool.size} audio files into unified MIDI!`);
-        }
-
-        // YIN Pitch Autocorrelation Detection
-        function autoCorrelate(buffer, sampleRate) {
-            let SIZE = buffer.length;
-            let rms = 0;
-            for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
-            rms = Math.sqrt(rms / SIZE);
-            if (rms < 0.02) return -1;
-
-            let r1 = 0, r2 = SIZE - 1, thres = 0.2;
-            for (let i = 0; i < SIZE / 2; i++) {
-                if (Math.abs(buffer[i]) < thres) { r1 = i; break; }
-            }
-            for (let i = 1; i < SIZE / 2; i++) {
-                if (Math.abs(buffer[SIZE - i]) < thres) { r2 = SIZE - i; break; }
-            }
-
-            buffer = buffer.slice(r1, r2);
-            SIZE = buffer.length;
-
-            let c = new Float32Array(SIZE);
-            for (let i = 0; i < SIZE; i++) {
-                for (let j = 0; j < SIZE - i; j++) c[i] += buffer[j] * buffer[j + i];
-            }
-
-            let d = 0; while (c[d] > c[d + 1]) d++;
-            let maxval = -1, maxpos = -1;
-            for (let i = d; i < SIZE; i++) {
-                if (c[i] > maxval) {
-                    maxval = c[i];
-                    maxpos = i;
-                }
-            }
-            return sampleRate / maxpos;
-        }
-
-        // ==========================================
-        // SHARED ENCODERS (WAV & MIDI)
-        // ==========================================
-        function bufferToWave(abuffer, len) {
-            let numOfChan = abuffer.numberOfChannels,
-                length = len * numOfChan * 2 + 44,
-                buffer = new ArrayBuffer(length),
-                view = new DataView(buffer),
-                channels = [], i, sample,
-                offset = 0, pos = 0;
-
-            function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
-            function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
-
-            setUint32(0x46464952); // "RIFF"
-            setUint32(length - 8);
-            setUint32(0x45564157); // "WAVE"
-            setUint32(0x20746d66); // "fmt " chunk
-            setUint32(16);
-            setUint16(1); // PCM
-            setUint16(numOfChan);
-            setUint32(abuffer.sampleRate);
-            setUint32(abuffer.sampleRate * 2 * numOfChan);
-            setUint16(numOfChan * 2);
-            setUint16(16);
-            setUint32(0x61746164); // "data" chunk
-            setUint32(length - pos - 4);
-
-            for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
-
+        // --- BINARY ENCODERS ---
+        function bufferToWave(abuffer) {
+            const len = abuffer.length, numOfChan = abuffer.numberOfChannels;
+            const length = len * numOfChan * 2 + 44;
+            const buffer = new ArrayBuffer(length), view = new DataView(buffer);
+            let offset = 0, pos = 0;
+            const setU16 = (d) => { view.setUint16(pos, d, true); pos+=2; };
+            const setU32 = (d) => { view.setUint32(pos, d, true); pos+=4; };
+            setU32(0x46464952); setU32(length - 8); setU32(0x45564157);
+            setU32(0x20746d66); setU32(16); setU16(1); setU16(numOfChan);
+            setU32(abuffer.sampleRate); setU32(abuffer.sampleRate * 2 * numOfChan);
+            setU16(numOfChan * 2); setU16(16); setU32(0x61746164); setU32(length - pos - 4);
+            const channels = [];
+            for (let i = 0; i < numOfChan; i++) channels.push(abuffer.getChannelData(i));
             while (pos < length) {
-                for (i = 0; i < numOfChan; i++) {
-                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
-                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-                    view.setInt16(pos, sample, true);
-                    pos += 2;
+                for (let i = 0; i < numOfChan; i++) {
+                    let s = Math.max(-1, Math.min(1, channels[i][offset]));
+                    s = (0.5 + s < 0 ? s * 32768 : s * 32767) | 0;
+                    view.setInt16(pos, s, true); pos += 2;
                 }
                 offset++;
             }
             return new Blob([buffer], { type: "audio/wav" });
         }
 
-        function generateMidiFile(events) {
-            const header = [
-                0x4d, 0x54, 0x68, 0x64, 0x00, 0x00, 0x00, 0x06,
-                0x00, 0x00, 0x00, 0x01, 0x00, 0x60
-            ];
-            const trackBytes = [0x4d, 0x54, 0x72, 0x6b];
-            const trackData = [];
-            let lastTime = 0;
-
-            events.forEach(ev => {
-                const deltaTime = Math.max(0, Math.floor((ev.time - lastTime) * 100));
-                lastTime = ev.time;
-                trackData.push(deltaTime & 0x7F, 0x90, ev.note & 0x7F, ev.velocity & 0x7F);
+        function createMidi(events) {
+            const header = [0x4d,0x54,0x68,0x64,0,0,0,6,0,0,0,1,0,0x60];
+            const track = [0x4d,0x54,0x72,0x6b];
+            const data = [];
+            let last = 0;
+            events.sort((a,b)=>a.time - b.time).forEach(ev => {
+                const dt = Math.max(0, Math.floor((ev.time - last) * 100));
+                last = ev.time;
+                data.push(dt & 0x7F, 0x90, ev.note & 0x7F, ev.velocity & 0x7F);
+                // Note off 100ms later
+                data.push(10, 0x80, ev.note & 0x7F, 0);
             });
-
-            trackData.push(0x00, 0xFF, 0x2F, 0x00);
-            const trackLen = trackData.length;
-            const lenBytes = [
-                (trackLen >> 24) & 0xFF, (trackLen >> 16) & 0xFF,
-                (trackLen >> 8) & 0xFF, trackLen & 0xFF
-            ];
-
-            return new Blob([new Uint8Array([...header, ...trackBytes, ...lenBytes, ...trackData])], { type: 'audio/midi' });
+            data.push(0x00, 0xFF, 0x2F, 0x00);
+            const l = data.length;
+            const lenBytes = [(l>>24)&255, (l>>16)&255, (l>>8)&255, l&255];
+            return new Blob([new Uint8Array([...header, ...track, ...lenBytes, ...data])], {type:'audio/midi'});
         }
 
-        function downloadBlob(blob, filename) {
+        function download(blob, name) {
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            const a = document.createElement('a'); a.href = url; a.download = name;
+            a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
 
-        window.addEventListener('resize', () => {
-            if (activeAudioBuffer) drawWaveform(activeAudioBuffer);
-            drawGranularPad();
+        // --- MODULE 1: SCRAMBLER ---
+        const scrambler = {
+            buffer: null, result: null, sequence: [], source: null,
+            loadSrc() {
+                const name = document.getElementById('srcScramble').value;
+                this.buffer = soundPool.get(name);
+                this.resetGrid();
+                this.draw();
+            },
+            resetGrid() {
+                if (!this.buffer) return;
+                const c = parseInt(document.getElementById('scrambleSlices').value);
+                this.sequence = Array.from({length: c}, (_, i) => i);
+                const g = document.getElementById('sliceGrid'); g.innerHTML = '';
+                this.sequence.forEach((s, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'bg-slate-900 border border-slate-700 text-center py-2 text-[10px] font-mono text-amber-300 rounded cursor-pointer';
+                    cell.textContent = `${i+1}:${s+1}`;
+                    cell.onclick = () => { this.sequence[i] = (this.sequence[i]+1)%c; cell.textContent = `${i+1}:${this.sequence[i]+1}`; };
+                    g.appendChild(cell);
+                });
+            },
+            draw() {
+                const canvas = document.getElementById('scrambleCanvas');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                if (!this.buffer) return;
+                const d = this.buffer.getChannelData(0), step = Math.ceil(d.length/canvas.width);
+                ctx.strokeStyle = '#f59e0b'; ctx.beginPath();
+                for (let i=0; i<canvas.width; i++) {
+                    let max = 0; for(let j=0; j<step; j++) max = Math.max(max, Math.abs(d[i*step+j]));
+                    ctx.moveTo(i, 50 - max*50); ctx.lineTo(i, 50 + max*50);
+                }
+                ctx.stroke();
+            },
+            detectBPM() {
+                if (!this.buffer) return;
+                const d = this.buffer.getChannelData(0), step = Math.floor(this.buffer.sampleRate*0.05);
+                let peaks = 0;
+                for (let i=0; i<d.length-step; i+=step) {
+                    let e=0; for(let j=0;j<step;j++) e+=Math.abs(d[i+j]);
+                    if (e/step > 0.25) peaks++;
+                }
+                document.getElementById('bpmDisplay').textContent = `BPM: ${Math.max(70, Math.min(180, Math.round(peaks/this.buffer.duration*15)))}`;
+            },
+            process() {
+                if (!this.buffer) return;
+                const c = this.sequence.length;
+                const slLen = Math.floor(this.buffer.length / c);
+                const out = audioCtx.createBuffer(this.buffer.numberOfChannels, this.buffer.length, this.buffer.sampleRate);
+                const env = document.getElementById('scrambleEnvelope').value === 'true';
+                
+                for(let i=this.sequence.length-1; i>0; i--) {
+                    const j = Math.floor(Math.random()*(i+1));
+                    [this.sequence[i], this.sequence[j]] = [this.sequence[j], this.sequence[i]];
+                }
+                
+                for (let ch=0; ch<this.buffer.numberOfChannels; ch++) {
+                    const src = this.buffer.getChannelData(ch), dst = out.getChannelData(ch);
+                    for (let i=0; i<c; i++) {
+                        const sOff = this.sequence[i]*slLen, dOff = i*slLen;
+                        for (let s=0; s<slLen; s++) {
+                            let v = src[sOff+s] || 0;
+                            if (env) { if (s<64) v*=s/64; else if (s>slLen-64) v*=(slLen-s)/64; }
+                            dst[dOff+s] = v;
+                        }
+                    }
+                }
+                this.result = out;
+                const g = document.getElementById('sliceGrid');
+                Array.from(g.children).forEach((cell, i) => cell.textContent = `${i+1}:${this.sequence[i]+1}`);
+            },
+            play() {
+                if (!this.result) this.process();
+                if (!this.result) return;
+                if (this.source) this.source.stop();
+                this.source = audioCtx.createBufferSource();
+                this.source.buffer = this.result;
+                this.source.connect(audioCtx.destination);
+                this.source.start();
+            },
+            exportWav() { if(this.result) download(bufferToWave(this.result), 'scrambled.wav'); }
+        };
+
+        // --- MODULE 2: GRANULAR ---
+        const granular = {
+            buffer: null, playing: false, schedId: null, nextTime: 0, pos: 0, scrubX: 0.5, scrubY: 0.5,
+            loadSrc() { this.buffer = soundPool.get(document.getElementById('srcGranular').value); },
+            drawPad() {
+                const cv = document.getElementById('granularPad');
+                const ctx = cv.getContext('2d');
+                cv.width = cv.parentElement.clientWidth; cv.height = 144;
+                ctx.fillStyle = '#090a0f'; ctx.fillRect(0,0,cv.width,cv.height);
+                ctx.strokeStyle = '#00f2fe'; ctx.beginPath();
+                ctx.moveTo(this.scrubX*cv.width, 0); ctx.lineTo(this.scrubX*cv.width, cv.height);
+                ctx.moveTo(0, this.scrubY*cv.height); ctx.lineTo(cv.width, this.scrubY*cv.height);
+                ctx.stroke();
+            },
+            toggle() {
+                if (!this.buffer) return;
+                const btn = document.getElementById('granPlayBtn');
+                if (this.playing) {
+                    this.playing = false; cancelAnimationFrame(this.schedId);
+                    btn.textContent = 'Start Stream'; btn.classList.replace('bg-rose-600','bg-sky-500');
+                } else {
+                    this.playing = true; this.nextTime = audioCtx.currentTime + 0.05;
+                    this.loop();
+                    btn.textContent = 'Stop Stream'; btn.classList.replace('bg-sky-500','bg-rose-600');
+                }
+            },
+            loop() {
+                if (!this.playing) return;
+                while (this.nextTime < audioCtx.currentTime + 0.1) {
+                    const dur = parseFloat(document.getElementById('grainSize').value)/1000;
+                    const spray = parseFloat(document.getElementById('grainSpray').value)/1000;
+                    const pitch = Math.pow(2, parseFloat(document.getElementById('grainPitch').value)/12);
+                    let start = (this.buffer.duration * this.scrubX) + (Math.random()-0.5)*spray;
+                    start = Math.max(0, Math.min(this.buffer.duration - dur, start));
+                    
+                    const src = audioCtx.createBufferSource(); src.buffer = this.buffer; src.playbackRate.value = pitch;
+                    const env = audioCtx.createGain();
+                    env.gain.setValueAtTime(0, this.nextTime);
+                    env.gain.linearRampToValueAtTime(0.3, this.nextTime + dur*0.5);
+                    env.gain.linearRampToValueAtTime(0, this.nextTime + dur);
+                    src.connect(env); env.connect(audioCtx.destination);
+                    src.start(this.nextTime, start, dur);
+
+                    const density = parseFloat(document.getElementById('grainDensity').value);
+                    this.nextTime += 1/density;
+                }
+                this.schedId = requestAnimationFrame(() => this.loop());
+            },
+            async export() {
+                if (!this.buffer) return;
+                const sec = parseFloat(document.getElementById('granDur').value);
+                const offCtx = new OfflineAudioContext(this.buffer.numberOfChannels, this.buffer.sampleRate*sec, this.buffer.sampleRate);
+                const dur = parseFloat(document.getElementById('grainSize').value)/1000;
+                const density = parseFloat(document.getElementById('grainDensity').value);
+                const pitch = Math.pow(2, parseFloat(document.getElementById('grainPitch').value)/12);
+                
+                for(let t=0; t<sec; t+=1/density) {
+                    const src = offCtx.createBufferSource(); src.buffer = this.buffer; src.playbackRate.value = pitch;
+                    const env = offCtx.createGain();
+                    env.gain.setValueAtTime(0, t); env.gain.linearRampToValueAtTime(0.3, t + dur*0.5); env.gain.linearRampToValueAtTime(0, t + dur);
+                    src.connect(env); env.connect(offCtx.destination);
+                    src.start(t, this.buffer.duration*this.scrubX, dur);
+                }
+                const rendered = await offCtx.startRendering();
+                download(bufferToWave(rendered), `granular_${sec}s.wav`);
+            }
+        };
+
+        document.getElementById('granularPad').addEventListener('pointermove', e => {
+            if (e.buttons > 0 || e.pointerType==='touch') {
+                const r = e.target.getBoundingClientRect();
+                granular.scrubX = Math.max(0, Math.min(1, (e.clientX-r.left)/r.width));
+                granular.scrubY = Math.max(0, Math.min(1, (e.clientY-r.top)/r.height));
+                document.getElementById('grainDensity').value = 10 + (1-granular.scrubY)*50; updateVal('grainDensity');
+                granular.drawPad();
+            }
         });
+
+        // --- MODULE 3: STRETCH ---
+        const stretch = {
+            source: null,
+            async render(durLimit) {
+                const buf = soundPool.get(document.getElementById('srcStretch').value);
+                if (!buf) return null;
+                const ratio = parseFloat(document.getElementById('stretchRatio').value);
+                const win = parseFloat(document.getElementById('stretchWindow').value)/1000;
+                const pitch = Math.pow(2, parseFloat(document.getElementById('stretchPitch').value)/12);
+                const renderSec = durLimit ? Math.min(durLimit, buf.duration*ratio) : buf.duration*ratio;
+                
+                const offCtx = new OfflineAudioContext(buf.numberOfChannels, buf.sampleRate*renderSec, buf.sampleRate);
+                const hopIn = win/4, hopOut = hopIn*ratio;
+                
+                for(let tIn=0, tOut=0; tOut<renderSec && tIn<buf.duration-win; tIn+=hopIn, tOut+=hopOut) {
+                    const src = offCtx.createBufferSource(); src.buffer = buf; src.playbackRate.value = pitch;
+                    const env = offCtx.createGain();
+                    env.gain.setValueAtTime(0, tOut); env.gain.linearRampToValueAtTime(0.15, tOut+win*0.5); env.gain.linearRampToValueAtTime(0, tOut+win);
+                    src.connect(env); env.connect(offCtx.destination);
+                    src.start(tOut, tIn, win);
+                }
+                return await offCtx.startRendering();
+            },
+            async preview() {
+                if (this.source) { this.source.stop(); this.source=null; return; }
+                const res = await this.render(10);
+                if (!res) return;
+                this.source = audioCtx.createBufferSource(); this.source.buffer = res; this.source.connect(audioCtx.destination); this.source.start();
+            },
+            async export() {
+                const durStr = document.getElementById('stretchDur').value;
+                const limit = durStr === 'full' ? 0 : parseFloat(durStr);
+                const res = await this.render(limit);
+                if (res) download(bufferToWave(res), 'paulstretch.wav');
+            }
+        };
+
+        // --- MODULE 4: DRUMS ---
+        const drums = {
+            timer: null, hits: [],
+            debouncedAnalyze() { clearTimeout(this.timer); this.timer = setTimeout(()=>this.analyze(), 300); },
+            async analyze() {
+                const buf = soundPool.get(document.getElementById('srcDrums').value);
+                if (!buf) return;
+                const thresh = parseFloat(document.getElementById('drumThresh').value)/100;
+                const target = document.getElementById('drumTarget').value;
+                
+                // Simple Biquad Offline Filter
+                const off = new OfflineAudioContext(1, buf.length, buf.sampleRate);
+                const src = off.createBufferSource(); src.buffer = buf;
+                const filter = off.createBiquadFilter();
+                if(target==='kick') { filter.type='lowpass'; filter.frequency.value=150; }
+                else if(target==='snare') { filter.type='bandpass'; filter.frequency.value=1000; }
+                else if(target==='hat') { filter.type='highpass'; filter.frequency.value=5000; }
+                else { filter.type='allpass'; }
+                src.connect(filter); filter.connect(off.destination); src.start(0);
+                
+                const filtered = await off.startRendering();
+                const d = filtered.getChannelData(0);
+                
+                this.hits = [];
+                const win = Math.floor(buf.sampleRate*0.015);
+                let last = -win*4;
+                for(let i=0; i<d.length-win; i+=win) {
+                    let rms = 0; for(let j=0; j<win; j++) rms += d[i+j]*d[i+j]; rms = Math.sqrt(rms/win);
+                    if (rms > thresh && (i-last) > buf.sampleRate*0.08) {
+                        this.hits.push({ time: i/buf.sampleRate, note: 36, velocity: Math.min(127, Math.round(rms*200)) });
+                        last = i;
+                    }
+                }
+                document.getElementById('drumLog').textContent = `Hits detected: ${this.hits.length}`;
+            },
+            preview() {
+                const now = audioCtx.currentTime;
+                this.hits.forEach(h => {
+                    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                    osc.frequency.setValueAtTime(100, now+h.time); osc.frequency.exponentialRampToValueAtTime(30, now+h.time+0.1);
+                    gain.gain.setValueAtTime(0.8, now+h.time); gain.gain.exponentialRampToValueAtTime(0.01, now+h.time+0.1);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now+h.time); osc.stop(now+h.time+0.15);
+                });
+            },
+            exportMidi() { if (this.hits.length) download(createMidi(this.hits), 'drums.mid'); }
+        };
+
+        // --- MODULE 5: PITCH ---
+        const pitch = {
+            timer: null, events: [],
+            debouncedAnalyze() { clearTimeout(this.timer); this.timer = setTimeout(()=>this.analyze(), 300); },
+            analyze() {
+                const buf = soundPool.get(document.getElementById('srcPitch').value);
+                const log = document.getElementById('pitchLog');
+                if (!buf) { log.innerHTML = "Select a track to analyze."; return; }
+                
+                const conf = parseFloat(document.getElementById('pitchConf').value)/100;
+                const d = buf.getChannelData(0), sr = buf.sampleRate;
+                const win = 4096, hop = 1024;
+                
+                this.events = [];
+                let lastNote = -1;
+                log.innerHTML = '';
+                
+                for (let i=0; i<d.length-win; i+=hop) {
+                    const frame = d.slice(i, i+win);
+                    let e = 0; for(let j=0;j<win;j++) e+=Math.abs(frame[j]);
+                    if (e/win < 0.01) continue;
+
+                    // Simplified Autocorrelation
+                    let best=0, bestLag=0;
+                    for (let lag=20; lag<1000; lag++) {
+                        let sum=0; for(let j=0; j<win-lag; j++) sum += frame[j]*frame[j+lag];
+                        if (sum > best) { best=sum; bestLag=lag; }
+                    }
+                    if (bestLag > 0) {
+                        const freq = sr/bestLag;
+                        if (freq > 40 && freq < 1000) {
+                            const note = Math.round(69 + 12*Math.log2(freq/440));
+                            // Pseudo-confidence
+                            const confidence = Math.min(1, best/(e*50));
+                            if (confidence > conf && note !== lastNote) {
+                                this.events.push({time: i/sr, note, velocity: 90});
+                                log.innerHTML += `<div>[${(i/sr).toFixed(2)}s] Note: ${note} (${freq.toFixed(1)}Hz)</div>`;
+                                lastNote = note;
+                            }
+                        }
+                    }
+                }
+                if (!this.events.length) log.innerHTML = "No confident pitches found.";
+            },
+            exportMidi() { if(this.events.length) download(createMidi(this.events), 'pitch.mid'); }
+        };
+
     </script>
 </body>
 </html>
